@@ -4,6 +4,29 @@ import "forge-std/test.sol";
 import "forge-std/console2.sol";
 import "./quote.sol";
 
+contract Deploy is Test {
+    QueryData query;
+    address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
+
+    function run() public {
+        require(deployer == 0x358506b4C5c441873AdE429c5A2BE777578E2C6f, "wrong deployer! change the private key");
+        // linea
+        // vm.createSelectFork(vm.envString("LINEA_RPC_URL"));
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 59144, "must be linea");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        // polygon-zkevm
+        vm.createSelectFork("https://zkevm-rpc.com");
+        vm.startBroadcast(deployer);
+        require(block.chainid == 1101, "must be polygon-zkevm");
+        query = new QueryData();
+        console2.log("query address", address(query));
+        vm.stopBroadcast();
+    }
+}
+
 contract POC is Test {
     IUniswapV3Pool WETH_USDC = IUniswapV3Pool(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);
     address WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; //1
@@ -13,19 +36,6 @@ contract POC is Test {
     function setUp() public {
         vm.createSelectFork("https://eth.llamarpc.com", 12544978 + 1);
         query = new QueryData();
-    }
-
-    address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
-
-    function run() public {
-        require(deployer == 0x399EfA78cAcD7784751CD9FBf2523eDf9EFDf6Ad, "wrong deployer! change the private key");
-        // linea
-        vm.createSelectFork(vm.envString("LINEA_RPC_URL"));
-        vm.startBroadcast(deployer);
-        require(block.chainid == 1, "must be mainnet");
-        query = new QueryData();
-        console2.log("query address", address(query));
-        vm.stopBroadcast();
     }
 
     function test_query() public {
