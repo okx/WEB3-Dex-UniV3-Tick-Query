@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import "forge-std/console2.sol";
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
 
