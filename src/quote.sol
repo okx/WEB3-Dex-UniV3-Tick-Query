@@ -2,8 +2,10 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+import "forge-std/console2.sol";
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
+
 interface IUniswapV3PoolImmutables {
     /// @notice The contract that deployed the pool, which must adhere to the IUniswapV3Factory interface
     /// @return The contract address
@@ -231,8 +233,15 @@ contract QueryData {
     {
         int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
         int24 left = leftPoint / tickSpacing / int24(256);
-        uint256 initPoint = uint256(int256(leftPoint / tickSpacing % 256));
+        uint256 initPoint;
+        if (leftPoint < 0) {
+            initPoint = 256 - uint256(int256(-leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        } else {
+            initPoint = uint256(int256(leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        }
         int24 right = rightPoint / tickSpacing / int24(256);
+        if (leftPoint < 0) left--;
+        if (rightPoint < 0) right--;
 
         int256[] memory tickInfo = new int[](arraySize);
 
@@ -269,8 +278,17 @@ contract QueryData {
     function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint) public view returns (bytes memory) {
         int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
         int24 left = leftPoint / tickSpacing / int24(256);
-        uint256 initPoint = uint256(int256(leftPoint / tickSpacing % 256));
+        uint256 initPoint;
+        if (leftPoint < 0) {
+            initPoint = 256 - uint256(int256(-leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        } else {
+            initPoint = uint256(int256(leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        }
+
         int24 right = rightPoint / tickSpacing / int24(256);
+        // fix-bug: -2 /100 = 0; 2/100 = 0; to avoid -2 and 2 use the same world, make the -2 store inside world -1, 2 store inside world 0
+        if (leftPoint < 0) left--;
+        if (rightPoint < 0) right--;
 
         bytes memory tickInfo = hex"";
 

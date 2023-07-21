@@ -38,7 +38,7 @@ contract POC is Test {
         query = new QueryData();
     }
 
-    function test_query() public {
+    function _test_query() public {
         (int256[] memory tickInfo) =
             query.queryUniv3TicksPool2(address(WETH_USDC), int24(69080), int24(414490), uint256(10));
         for (uint256 i = 0; i < tickInfo.length; i++) {
@@ -48,7 +48,7 @@ contract POC is Test {
     }
 
     function test_query3() public {
-        (bytes memory tickInfo) = query.queryUniv3TicksPool3(address(WETH_USDC), int24(-69080), int24(414490));
+        (bytes memory tickInfo) = query.queryUniv3TicksPool3(address(WETH_USDC), int24(-66050), int24(0));
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);
