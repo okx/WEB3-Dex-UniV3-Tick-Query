@@ -30,11 +30,10 @@ contract Deploy is Test {
         query = new QueryData();
         console2.log("query address", address(query));
         vm.stopBroadcast();
-
     }
 }
 
-contract POC is Test {
+contract UniV3QuoteTest is Test {
     IUniswapV3Pool WETH_USDC = IUniswapV3Pool(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);
     address WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; //1
     address USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; //0
@@ -56,6 +55,37 @@ contract POC is Test {
 
     function test_query3() public {
         (bytes memory tickInfo) = query.queryUniv3TicksPool3(address(WETH_USDC), int24(-66050), int24(0));
+        uint256 len;
+        uint256 offset;
+        console2.logBytes(tickInfo);
+
+        assembly {
+            len := mload(tickInfo)
+            offset := add(tickInfo, 32)
+        }
+        for (uint256 i = 0; i < len / 32; i++) {
+            int256 res;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+            }
+            console2.log("tick: %d", int128(res >> 128));
+            console2.log("l: %d", int128(res));
+        }
+    }
+}
+
+contract HorizonQuoteTest is Test {
+    IHorizonPool WETH_USDC = IHorizonPool(0x77557405a645c79e9F8b0096997b6a247B12b315);
+    QueryData query;
+
+    function setUp() public {
+        vm.createSelectFork("https://linea-mainnet.infura.io/v3/4b1ef7929a9b4d789e37917c736673d2", 43253);
+        query = new QueryData();
+    }
+
+    function test_query() public {
+        (bytes memory tickInfo) = query.queryHorizonTicksPool(address(WETH_USDC), int24(887273), uint256(10), false);
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);

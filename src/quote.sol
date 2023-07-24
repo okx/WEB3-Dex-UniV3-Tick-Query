@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-pragma abicoder v2;
+pragma solidity 0.8.19;
 
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
@@ -150,18 +149,36 @@ interface IUniswapV3PoolState {
         );
 }
 
+interface IHorizonPool {
+    function tickDistance() external view returns (int24);
+    function ticks(int24 tick)
+        external
+        view
+        returns (
+            uint128 liquidityGross,
+            int128 liquidityNet,
+            uint256 feeGrowthOutside,
+            uint128 secondsPerLiquidityOutside
+        );
+    function initializedTicks(int24 tick) external view returns (int24 previous, int24 next);
+    function getPoolState()
+        external
+        view
+        returns (uint160 sqrtP, int24 currentTick, int24 nearestCurrentTick, bool locked);
+}
 /// @title The interface for a Uniswap V3 Pool
 /// @notice A Uniswap pool facilitates swapping and automated market making between any two assets that strictly conform
 /// to the ERC20 specification
 /// @dev The pool interface is broken up into many smaller pieces
+
 interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 
 /// @title DexNativeRouter
 /// @notice Entrance of trading native token in web3-dex
 contract QueryData {
     address public constant owner = 0x358506b4C5c441873AdE429c5A2BE777578E2C6f;
-    int24 internal constant MIN_TICK = -887272;
-    int24 internal constant MAX_TICK = -MIN_TICK;
+    int24 internal constant MIN_TICK_MINUS_1 = -887272 - 1;
+    int24 internal constant MAX_TICK_PLUS_1 = 887272 + 1;
 
     struct Univ3TickStruct {
         int24 tick;
@@ -169,7 +186,6 @@ contract QueryData {
     }
 
     event Kill(address indexed killer);
-
 
     function kill() public {
         require(msg.sender == owner, "not allowed");
@@ -325,6 +341,45 @@ contract QueryData {
             left++;
         }
 
+        return tickInfo;
+    }
+
+    function queryHorizonTicksPool(address pool, int24 currTick, uint256 iteration, bool direction)
+        public
+        view
+        returns (bytes memory)
+    {
+        if (currTick == MAX_TICK_PLUS_1) {
+            (,, currTick,) = IHorizonPool(pool).getPoolState();
+        }
+        // travel from left to right
+        bytes memory tickInfo;
+        if (direction) {
+            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
+
+                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+                (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
+                if (currTick == nextTick) {
+                    break;
+                }
+                currTick = nextTick;
+                iteration--;
+            }
+        } else {
+            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
+                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+                (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick);
+                if (prevTick == currTick) {
+                    break;
+                }
+                currTick = prevTick;
+                iteration--;
+            }
+        }
         return tickInfo;
     }
 }
