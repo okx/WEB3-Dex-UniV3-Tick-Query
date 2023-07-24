@@ -227,7 +227,7 @@ contract QueryData {
     function queryUniv3TicksPool(address pool, int24 leftPoint, int24 rightPoint)
         public
         view
-        returns (int24[] memory efficientTicks, int128[] memory efficientLiquidityNets)
+        returns (int24[] memory, int128[] memory)
     {
         int24 pointDelta = IUniswapV3Pool(pool).tickSpacing();
         uint256 len = uint256(int256((rightPoint - leftPoint) / pointDelta));
@@ -248,12 +248,11 @@ contract QueryData {
                 break;
             }
         }
-        efficientTicks = new int24[]((efficientCount));
-        efficientLiquidityNets = new int128[](efficientCount);
-        for (uint256 i = 0; i < efficientCount; i++) {
-            efficientTicks[i] = ticks[i];
-            efficientLiquidityNets[i] = liquidityNets[i];
+        assembly {
+            mstore(ticks, efficientCount)
+            mstore(liquidityNets, efficientCount)
         }
+        return (ticks, liquidityNets);
     }
 
     function queryUniv3TicksPool2(address pool, int24 leftPoint, int24 rightPoint, uint256 arraySize)

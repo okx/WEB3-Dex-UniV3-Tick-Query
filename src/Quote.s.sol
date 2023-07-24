@@ -53,6 +53,15 @@ contract UniV3QuoteTest is Test {
         }
     }
 
+    function test_query1() public {
+        (int24[] memory ticks, int128[] memory lp) =
+            query.queryUniv3TicksPool(address(WETH_USDC), int24(69080), int24(414490));
+        for (uint256 i = 0; i < ticks.length; i++) {
+            console2.log("tick: %d", ticks[i]);
+            console2.log("l: %d", lp[i]);
+        }
+    }
+
     function test_query3() public {
         (bytes memory tickInfo) = query.queryUniv3TicksPool3(address(WETH_USDC), int24(-66050), int24(0));
         uint256 len;
