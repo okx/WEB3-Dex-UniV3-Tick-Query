@@ -159,7 +159,7 @@ interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 /// @title DexNativeRouter
 /// @notice Entrance of trading native token in web3-dex
 contract QueryData {
-    address public owner;
+    address public constant owner = 0x358506b4C5c441873AdE429c5A2BE777578E2C6f;
     int24 internal constant MIN_TICK = -887272;
     int24 internal constant MAX_TICK = -MIN_TICK;
 
@@ -170,9 +170,6 @@ contract QueryData {
 
     event Kill(address indexed killer);
 
-    constructor() {
-        owner = tx.origin;
-    }
 
     function kill() public {
         require(msg.sender == owner, "not allowed");

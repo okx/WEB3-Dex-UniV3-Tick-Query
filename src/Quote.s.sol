@@ -18,12 +18,19 @@ contract Deploy is Test {
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
         // polygon-zkevm
-        vm.createSelectFork("https://zkevm-rpc.com");
+        // vm.createSelectFork("https://zkevm-rpc.com");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 1101, "must be polygon-zkevm");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        vm.createSelectFork("https://rpc.mantle.xyz");
         vm.startBroadcast(deployer);
-        require(block.chainid == 1101, "must be polygon-zkevm");
+        require(block.chainid == 5000, "must be mantle");
         query = new QueryData();
         console2.log("query address", address(query));
         vm.stopBroadcast();
+
     }
 }
 

@@ -1,0 +1,65 @@
+pragma solidity 0.8.19;
+
+import "forge-std/test.sol";
+import "forge-std/console2.sol";
+
+interface IPool {
+    function tickSpacing() external view returns (int24);
+    function tickTable(int16) external view returns (uint256);
+    function ticks(int24)
+        external
+        view
+        returns (
+            uint128 liquidityTotal,
+            int128 liquidityDelta,
+            uint256 outerFeeGrowth0Token,
+            uint256 outerFeeGrowth1Token,
+            int24 prevTick,
+            int24 nextTick,
+            uint160 outerSecondsPerLiquidity,
+            uint32 outerSecondsSpent,
+            bool hasLimitOrders
+        );
+}
+
+contract QueryData {}
+
+contract CamelotTest is Test {
+    address pool = 0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f;
+    int16 internal constant SECOND_LAYER_OFFSET = 3466;
+    uint256 root;
+    mapping(int16 => uint256) tickSecondLayer;
+
+    function setUp() public {
+        vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 113406591);
+        root = uint256(vm.load(pool, bytes32(uint256(12))));
+        getTickSecondLayer();
+    }
+
+    function test_1() public {
+        for (int16 i = 0; i < 256; i++) {
+            uint256 index = root & 0x01;
+            root = root >> 1;
+            if (index != 0) {
+                console2.log("i: ", i);
+                console2.logBytes32(bytes32(tickSecondLayer[i]));
+                int256 index2 = tickSecondLayer[i];
+                uint256 value2 = IPool(pool).tickTable(index2);
+                for (int16 j = 0; j < 256; j++) {
+                    uint256 index3 = value2 & 0x01;
+                    if (index3 != 0) {
+                        int24 tick = int24(0);
+                    }
+                }
+            }
+        }
+    }
+
+    function getTickSecondLayer() internal {
+        for (int16 i = 0; i < 28; i++) {
+            bytes32 slot = keccak256(abi.encode(i, uint256(13)));
+            uint256 value = uint256(vm.load(pool, slot));
+            tickSecondLayer[i] = value;
+        }
+    }
+}
