@@ -224,32 +224,6 @@ contract QueryData {
         selfdestruct(payable(owner));
     }
 
-    function queryUniv3Ticks(address pool, int24 leftPoint, int24 rightPoint)
-        public
-        view
-        returns (int24[] memory ticks, int128[] memory liquidityNets)
-    {
-        int24 pointDelta = IUniswapV3Pool(pool).tickSpacing();
-
-        uint256 len = 200;
-
-        ticks = new int24[](len);
-        liquidityNets = new int128[](len);
-        uint256 idx = 0;
-        for (int24 i = leftPoint; i < rightPoint; i += pointDelta) {
-            (, int128 int128liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(i);
-            if (int128liquidityNet == 0) {
-                continue;
-            }
-            ticks[idx] = i;
-            liquidityNets[idx] = int128liquidityNet;
-            idx++;
-            if (idx == len) {
-                break;
-            }
-        }
-    }
-
     function queryUniv3TicksPool(address pool, int24 leftPoint, int24 rightPoint)
         public
         view
