@@ -105,3 +105,34 @@ contract HorizonQuoteTest is Test {
         }
     }
 }
+
+contract AlgebraQuoteTest is Test {
+    IAlgebraPool WETH_USDC = IAlgebraPool(0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f);
+    QueryData query;
+
+    function setUp() public {
+        vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
+        query = new QueryData();
+    }
+
+    function test_query() public {
+        (bytes memory tickInfo) = query.queryAlgebraTicksPool(address(WETH_USDC), int24(887273), uint256(100), true);
+        uint256 len;
+        uint256 offset;
+        console2.logBytes(tickInfo);
+
+        assembly {
+            len := mload(tickInfo)
+            offset := add(tickInfo, 32)
+        }
+        for (uint256 i = 0; i < len / 32; i++) {
+            int256 res;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+            }
+            console2.log("tick: %d", int128(res >> 128));
+            console2.log("l: %d", int128(res));
+        }
+    }
+}

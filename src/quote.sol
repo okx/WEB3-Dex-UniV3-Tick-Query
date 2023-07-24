@@ -171,6 +171,37 @@ interface IHorizonPool {
 /// to the ERC20 specification
 /// @dev The pool interface is broken up into many smaller pieces
 
+interface IAlgebraPool {
+    function globalState()
+        external
+        view
+        returns (
+            uint160 price,
+            int24 tick,
+            int24 prevInitializedTick,
+            uint16 fee,
+            uint16 timepointIndex,
+            uint8 communityFee,
+            bool unlocked
+        );
+    function tickSpacing() external view returns (int24);
+    function ticks(int24 tick)
+        external
+        view
+        returns (
+            uint128 liquidityTotal,
+            int128 liquidityDelta,
+            uint256 outerFeeGrowth0Token,
+            uint256 outerFeeGrowth1Token,
+            int24 prevTick,
+            int24 nextTick,
+            uint160 outerSecondsPerLiquidity,
+            uint32 outerSecondsSpent,
+            bool hasLimitOrders
+        );
+    function tickTable(int16 wordPosition) external view returns (uint256);
+}
+
 interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 
 /// @title DexNativeRouter
@@ -374,6 +405,46 @@ contract QueryData {
                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
                 (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick);
                 if (prevTick == currTick) {
+                    break;
+                }
+                currTick = prevTick;
+                iteration--;
+            }
+        }
+        return tickInfo;
+    }
+
+    function queryAlgebraTicksPool(address pool, int24 currTick, uint256 iteration, bool direction)
+        public
+        view
+        returns (bytes memory)
+    {
+        if (currTick == MAX_TICK_PLUS_1) {
+            (,, currTick,,,,) = IAlgebraPool(pool).globalState();
+        }
+        // travel from left to right
+        bytes memory tickInfo;
+        if (direction) {
+            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
+
+                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                if (currTick == nextTick) {
+                    break;
+                }
+                currTick = nextTick;
+                iteration--;
+            }
+        } else {
+            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
+
+                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                if (currTick == prevTick) {
                     break;
                 }
                 currTick = prevTick;
