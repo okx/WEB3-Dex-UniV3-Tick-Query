@@ -255,55 +255,6 @@ contract QueryData {
         return (ticks, liquidityNets);
     }
 
-    function queryUniv3TicksPool2(address pool, int24 leftPoint, int24 rightPoint, uint256 arraySize)
-        public
-        view
-        returns (int256[] memory)
-    {
-        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
-        int24 left = leftPoint / tickSpacing / int24(256);
-        uint256 initPoint;
-        if (leftPoint < 0) {
-            initPoint = 256 - uint256(int256(-leftPoint)) / uint256(int256(tickSpacing)) % 256;
-        } else {
-            initPoint = uint256(int256(leftPoint)) / uint256(int256(tickSpacing)) % 256;
-        }
-        int24 right = rightPoint / tickSpacing / int24(256);
-        if (leftPoint < 0) left--;
-        if (rightPoint < 0) right--;
-
-        int256[] memory tickInfo = new int[](arraySize);
-
-        uint256 index = 0;
-        while (left < right + 1) {
-            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(left));
-            if (res > 0) {
-                res = res >> initPoint;
-                for (uint256 i = initPoint; i < 256; i++) {
-                    uint256 isInit = res & 0x01;
-                    if (isInit > 0) {
-                        int256 tick = int256((256 * left + int256(i)) * tickSpacing);
-                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
-
-                        tickInfo[index] = int256(tick << 128) + liquidityNet;
-
-                        index++;
-                    }
-                    if (index == arraySize) break;
-                    res = res >> 1;
-                }
-            }
-            initPoint = 0;
-            left++;
-        }
-        uint256 len = index;
-
-        assembly {
-            mstore(tickInfo, len)
-        }
-        return tickInfo;
-    }
-
     function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint) public view returns (bytes memory) {
         int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
         int24 left = leftPoint / tickSpacing / int24(256);
