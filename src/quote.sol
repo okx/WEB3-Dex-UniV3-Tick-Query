@@ -255,7 +255,66 @@ contract QueryData {
         return (ticks, liquidityNets);
     }
 
-    function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint) public view returns (bytes memory) {
+    function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint, uint len)
+        public
+        view
+        returns (int24[] memory ticks, int128[] memory liquidityNets)
+    {
+        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+        int24 left = leftPoint / tickSpacing / int24(256);
+        uint256 initPoint;
+        if (leftPoint < 0) {
+            initPoint = 256 - uint256(int256(-leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        } else {
+            initPoint = uint256(int256(leftPoint)) / uint256(int256(tickSpacing)) % 256;
+        }
+
+        int24 right = rightPoint / tickSpacing / int24(256);
+        // fix-bug: -2 /100 = 0; 2/100 = 0; to avoid -2 and 2 use the same world, make the -2 store inside world -1, 2 store inside world 0
+        if (leftPoint < 0) left--;
+        if (rightPoint < 0) right--;
+
+        // uint256 len = uint(int((rightPoint - leftPoint) / tickSpacing));
+        ticks = new int24[](len);
+        liquidityNets = new int128[](len);
+
+        uint256 index;
+
+        while (left < right + 1) {
+            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(left));
+            if (res > 0) {
+                res = res >> initPoint;
+                for (uint256 i = initPoint; i < 256; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * left + int256(i)) * tickSpacing);
+                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+
+                        ticks[index] = int24(tick);
+                        liquidityNets[index] = liquidityNet;
+
+                        index++;
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            initPoint = 0;
+            left++;
+        }
+
+        assembly {
+            mstore(ticks, index)
+            mstore(liquidityNets, index)
+        }
+        return (ticks, liquidityNets);
+    }
+
+    function queryUniv3TicksPool3Compact(address pool, int24 leftPoint, int24 rightPoint)
+        public
+        view
+        returns (bytes memory)
+    {
         int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
         int24 left = leftPoint / tickSpacing / int24(256);
         uint256 initPoint;
@@ -302,6 +361,56 @@ contract QueryData {
     function queryHorizonTicksPool(address pool, int24 currTick, uint256 iteration, bool direction)
         public
         view
+        returns (int24[] memory, int128[] memory)
+    {
+        if (currTick == MAX_TICK_PLUS_1) {
+            (,, currTick,) = IHorizonPool(pool).getPoolState();
+        }
+        // travel from left to right
+        int24[] memory ticks = new int24[](iteration);
+        int128[] memory liquidityNets = new int128[](iteration);
+        uint256 index;
+        if (direction) {
+            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
+
+                ticks[index] = currTick;
+                liquidityNets[index] = liquidityNet;
+                index++;
+
+                (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
+                if (currTick == nextTick) {
+                    break;
+                }
+                currTick = nextTick;
+                iteration--;
+            }
+        } else {
+            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
+
+                ticks[index] = currTick;
+                liquidityNets[index] = liquidityNet;
+                index++;
+
+                (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick);
+                if (prevTick == currTick) {
+                    break;
+                }
+                currTick = prevTick;
+                iteration--;
+            }
+        }
+        assembly {
+            mstore(ticks, index)
+            mstore(liquidityNets, index)
+        }
+        return (ticks, liquidityNets);
+    }
+
+    function queryHorizonTicksPoolCompact(address pool, int24 currTick, uint256 iteration, bool direction)
+        public
+        view
         returns (bytes memory)
     {
         if (currTick == MAX_TICK_PLUS_1) {
@@ -339,6 +448,54 @@ contract QueryData {
     }
 
     function queryAlgebraTicksPool(address pool, int24 currTick, uint256 iteration, bool direction)
+        public
+        view
+        returns (int24[] memory, int128[] memory)
+    {
+        if (currTick == MAX_TICK_PLUS_1) {
+            (,, currTick,,,,) = IAlgebraPool(pool).globalState();
+        }
+        // travel from left to right
+        int24[] memory ticks = new int24[](iteration);
+        int128[] memory liquidityNets = new int128[](iteration);
+        uint256 index;
+        if (direction) {
+            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
+
+                ticks[index] = currTick;
+                liquidityNets[index] = liquidityNet;
+                index++;
+
+                if (currTick == nextTick) {
+                    break;
+                }
+                currTick = nextTick;
+                iteration--;
+            }
+        } else {
+            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
+                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
+
+                ticks[index] = currTick;
+                liquidityNets[index] = liquidityNet;
+                index++;
+
+                if (currTick == prevTick) {
+                    break;
+                }
+                currTick = prevTick;
+                iteration--;
+            }
+        }
+        assembly {
+            mstore(ticks, index)
+            mstore(liquidityNets, index)
+        }
+        return (ticks, liquidityNets);
+    }
+
+    function queryAlgebraTicksPoolCompact(address pool, int24 currTick, uint256 iteration, bool direction)
         public
         view
         returns (bytes memory)

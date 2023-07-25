@@ -40,20 +40,11 @@ contract UniV3QuoteTest is Test {
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://eth.llamarpc.com", 12544978 + 1);
+        vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 12544978 + 1);
         query = new QueryData();
     }
 
-    function _test_query() public {
-        (int256[] memory tickInfo) =
-            query.queryUniv3TicksPool2(address(WETH_USDC), int24(69080), int24(414490), uint256(10));
-        for (uint256 i = 0; i < tickInfo.length; i++) {
-            console2.log("tick: %d", int128(tickInfo[i] >> 128));
-            console2.log("l: %d", int128(tickInfo[i]));
-        }
-    }
-
-    function test_query1() public {
+    function _test_query1() public {
         (int24[] memory ticks, int128[] memory lp) =
             query.queryUniv3TicksPool(address(WETH_USDC), int24(69080), int24(414490));
         for (uint256 i = 0; i < ticks.length; i++) {
@@ -62,8 +53,17 @@ contract UniV3QuoteTest is Test {
         }
     }
 
+    function test_query2() public {
+        (int24[] memory ticks, int128[] memory lp) =
+            query.queryUniv3TicksPool3(address(WETH_USDC), int24(-66050), int24(400000), 500);
+        for (uint256 i = 0; i < ticks.length; i++) {
+            console2.log("tick: %d", ticks[i]);
+            console2.log("l: %d", lp[i]);
+        }
+    }
+
     function test_query3() public {
-        (bytes memory tickInfo) = query.queryUniv3TicksPool3(address(WETH_USDC), int24(-66050), int24(0));
+        (bytes memory tickInfo) = query.queryUniv3TicksPool3Compact(address(WETH_USDC), int24(-66050), int24(400000));
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);
@@ -94,7 +94,8 @@ contract HorizonQuoteTest is Test {
     }
 
     function test_query() public {
-        (bytes memory tickInfo) = query.queryHorizonTicksPool(address(WETH_USDC), int24(887273), uint256(10), false);
+        (bytes memory tickInfo) =
+            query.queryHorizonTicksPoolCompact(address(WETH_USDC), int24(887273), uint256(10), false);
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);
@@ -111,6 +112,15 @@ contract HorizonQuoteTest is Test {
             }
             console2.log("tick: %d", int128(res >> 128));
             console2.log("l: %d", int128(res));
+        }
+    }
+
+    function test_query2() public {
+        (int24[] memory ticks, int128[] memory lps) =
+            query.queryHorizonTicksPool(address(WETH_USDC), int24(887273), uint256(10), false);
+        for (uint256 i = 0; i < ticks.length; i++) {
+            console2.log("tick", ticks[i]);
+            console2.log("lps ", lps[i]);
         }
     }
 }
@@ -125,7 +135,8 @@ contract AlgebraQuoteTest is Test {
     }
 
     function test_query() public {
-        (bytes memory tickInfo) = query.queryAlgebraTicksPool(address(WETH_USDC), int24(887273), uint256(100), true);
+        (bytes memory tickInfo) =
+            query.queryAlgebraTicksPoolCompact(address(WETH_USDC), int24(887273), uint256(100), false);
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);
@@ -142,6 +153,15 @@ contract AlgebraQuoteTest is Test {
             }
             console2.log("tick: %d", int128(res >> 128));
             console2.log("l: %d", int128(res));
+        }
+    }
+
+    function test_query2() public {
+        (int24[] memory ticks, int128[] memory lps) =
+            query.queryAlgebraTicksPool(address(WETH_USDC), int24(887273), uint256(100), false);
+        for (uint256 i = 0; i < ticks.length; i++) {
+            console2.log("tick", ticks[i]);
+            console2.log("lps ", lps[i]);
         }
     }
 }
