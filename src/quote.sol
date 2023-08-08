@@ -255,7 +255,7 @@ contract QueryData {
         return (ticks, liquidityNets);
     }
 
-    function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint, uint len)
+    function queryUniv3TicksPool3(address pool, int24 leftPoint, int24 rightPoint, uint256 len)
         public
         view
         returns (int24[] memory ticks, int128[] memory liquidityNets)
