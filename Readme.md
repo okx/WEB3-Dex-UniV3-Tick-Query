@@ -1,8 +1,8 @@
 # dep
 ```js
-forge install OpenZeppelin/openzeppelin-contracts --no-git
-forge install Horizon-Dex/contracts --no-git
-forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-git
+forge install OpenZeppelin/openzeppelin-contracts
+forge install Horizon-Dex/contracts
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable
 ```
 
 # deploy
