@@ -1,6 +1,11 @@
 # Compiler files
 cache/
 out/
+lib/Algebra
+lib/contracts
+lib/forge-std
+lib/openzeppelin-contracts
+lib/openzeppelin-contracts-upgradeable
 lib/
 # Ignores development broadcast logs
 broadcast

@@ -165,3 +165,22 @@ contract AlgebraQuoteTest is Test {
         }
     }
 }
+
+contract IZumiQuoteTest is Test {
+    address WBNB_USDT = 0x1CE3082de766ebFe1b4dB39f616426631BbB29aC;
+    QueryData query;
+
+    function setUp() public {
+        vm.createSelectFork("https://bsc-dataseed3.ninicoin.io", 30671548 + 1);
+        query = new QueryData();
+    }
+    // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
+
+    function test_query() public {
+        IZumiPool(WBNB_USDT).factory();
+        IZumiPool(WBNB_USDT).points(-61760);
+        IZumiPool(WBNB_USDT).orderOrEndpoint(-61760);
+        (int24[] memory ticks, int128[] memory liquidityNets, int24[] memory orders, uint256[] memory sellingXArr) =
+            query.queryIzumiTicksPool(WBNB_USDT, -55240, 55240, 500);
+    }
+}
