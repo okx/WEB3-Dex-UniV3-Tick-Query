@@ -181,6 +181,6 @@ contract IZumiQuoteTest is Test {
         IZumiPool(WBNB_USDT).points(-61760);
         IZumiPool(WBNB_USDT).orderOrEndpoint(-61760);
         (int24[] memory ticks, int128[] memory liquidityNets, int24[] memory orders, uint256[] memory sellingXArr) =
-            query.queryIzumiTicksPool(WBNB_USDT, -55240, 55240, 500);
+            query.queryIzumiTicksPool(WBNB_USDT, -887272, 0, 0);
     }
 }

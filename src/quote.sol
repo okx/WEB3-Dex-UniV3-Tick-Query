@@ -600,7 +600,9 @@ contract QueryData {
         Var memory local;
         local.tickSpacing = IZumiPool(pool).pointDelta();
         (local.left, local.right, local.initPoint) = getBoundry(local.tickSpacing, leftPoint, rightPoint);
-
+        if (len == 0) {
+            len = uint(int256((rightPoint - leftPoint) / local.tickSpacing));
+        }
         ticks = new int24[](len);
         liquidityNets = new int128[](len);
         orders = new int24[](len);
@@ -626,7 +628,7 @@ contract QueryData {
                         }
                         if (orderOrEndpoint & 0x02 == 0x00) {
                             (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
-                            if (!(sellingX == 0 && sellingY == 0)) {
+                            if (sellingX != 0 || sellingY != 0) {
                                 orders[local.index1] = int24(tick);
                                 sellingArr[local.index1] = uint256(sellingX) << 128 | sellingY;
 
