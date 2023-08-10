@@ -616,8 +616,8 @@ contract QueryData {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
                         int24 tick = int24(int256((256 * local.left + int256(i)) * local.tickSpacing));
-                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick);
-                        if (orderOrEndpoint & 0x01 == 0x00) {
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick/local.tickSpacing);
+                        if (orderOrEndpoint & 0x01 == 0x01) {
                             (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
                                 ticks[local.index0] = int24(tick);
@@ -626,7 +626,7 @@ contract QueryData {
                                 local.index0++;
                             }
                         }
-                        if (orderOrEndpoint & 0x02 == 0x00) {
+                        if (orderOrEndpoint & 0x02 == 0x02) {
                             (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
                             if (sellingX != 0 || sellingY != 0) {
                                 orders[local.index1] = int24(tick);

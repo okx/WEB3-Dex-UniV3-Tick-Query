@@ -184,3 +184,4 @@ contract IZumiQuoteTest is Test {
             query.queryIzumiTicksPool(WBNB_USDT, -887272, 0, 0);
     }
 }
+
