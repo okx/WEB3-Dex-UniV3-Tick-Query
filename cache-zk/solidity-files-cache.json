@@ -1,0 +1,56 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/comcatli/Downloads/Web3-DEX-Univ3-Tick-Query/src/quote.sol": {
+      "lastModificationDate": 1691660660957,
+      "contentHash": "c583ce1f5ca697f4dbd14b325cc0f89a",
+      "sourceName": "src/quote.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "mode": "3"
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.methodIdentifiers",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        },
+        "zksolc": {
+          "version": "1.3.1",
+          "compilerSource": "binary",
+          "settings": {
+            "optimizer": {
+              "enabled": true,
+              "mode": "3"
+            },
+            "compilerPath": "",
+            "experimental": {}
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.17"
+      ],
+      "artifacts": [
+        "IAlgebraPool",
+        "IHorizonPool",
+        "IUniswapV3Pool",
+        "IUniswapV3PoolImmutables",
+        "IUniswapV3PoolState",
+        "IZumiPool",
+        "QueryData"
+      ]
+    }
+  }
+}

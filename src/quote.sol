@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.17;
 
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
@@ -149,8 +149,6 @@ interface IUniswapV3PoolState {
         );
 }
 
-import "forge-std/console2.sol";
-
 interface IZumiPool {
     function points(int24 tick) external view returns (uint256, int128, uint256, uint256, bool);
     function pointDelta() external view returns (int24);
@@ -232,21 +230,12 @@ interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 /// @title DexNativeRouter
 /// @notice Entrance of trading native token in web3-dex
 contract QueryData {
-    address public constant owner = 0x358506b4C5c441873AdE429c5A2BE777578E2C6f;
     int24 internal constant MIN_TICK_MINUS_1 = -887272 - 1;
     int24 internal constant MAX_TICK_PLUS_1 = 887272 + 1;
 
     struct Univ3TickStruct {
         int24 tick;
         int128 liquidityNet;
-    }
-
-    event Kill(address indexed killer);
-
-    function kill() public {
-        require(msg.sender == owner, "not allowed");
-        emit Kill(msg.sender);
-        selfdestruct(payable(owner));
     }
 
     function queryUniv3TicksPool(address pool, int24 leftPoint, int24 rightPoint)
@@ -601,7 +590,7 @@ contract QueryData {
         local.tickSpacing = IZumiPool(pool).pointDelta();
         (local.left, local.right, local.initPoint) = getBoundry(local.tickSpacing, leftPoint, rightPoint);
         if (len == 0) {
-            len = uint(int256((rightPoint - leftPoint) / local.tickSpacing));
+            len = uint256(int256((rightPoint - leftPoint) / local.tickSpacing));
         }
         ticks = new int24[](len);
         liquidityNets = new int128[](len);
@@ -616,7 +605,7 @@ contract QueryData {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
                         int24 tick = int24(int256((256 * local.left + int256(i)) * local.tickSpacing));
-                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick/local.tickSpacing);
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / local.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
                             (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
