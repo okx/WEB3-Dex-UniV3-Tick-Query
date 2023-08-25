@@ -6,6 +6,7 @@ lib/contracts
 lib/forge-std
 lib/openzeppelin-contracts
 lib/openzeppelin-contracts-upgradeable
+lib/iZiSwap-core
 lib/
 # Ignores development broadcast logs
 broadcast
