@@ -382,7 +382,8 @@ contract QueryData {
                         int256 tick = int256((256 * left + int256(i)) * tickSpacing);
                         (, int128 liquidityNet, , , , , , ) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
 
-                        int256 data = int256(tick << 128) + (int256(liquidityNet) & 0xffffffffffffffffffffffffffffffff);
+                        int256 data = int256(tick << 128) +
+                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -464,7 +465,8 @@ contract QueryData {
             while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
                 (, int128 liquidityNet, , ) = IHorizonPool(pool).ticks(currTick);
 
-                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                int256 data = int256(uint256(int256(currTick)) << 128) +
+                    (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
                 (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
                 if (currTick == nextTick) {
@@ -476,7 +478,8 @@ contract QueryData {
         } else {
             while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
                 (, int128 liquidityNet, , ) = IHorizonPool(pool).ticks(currTick);
-                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                int256 data = int256(uint256(int256(currTick)) << 128) +
+                    (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
                 (int24 prevTick, ) = IHorizonPool(pool).initializedTicks(currTick);
                 if (prevTick == currTick) {
@@ -553,7 +556,8 @@ contract QueryData {
             while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
                 (, int128 liquidityNet, , , int24 prevTick, int24 nextTick, , , ) = IAlgebraPool(pool).ticks(currTick);
 
-                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                int256 data = int256(uint256(int256(currTick)) << 128) +
+                    (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                 if (currTick == nextTick) {
@@ -566,7 +570,8 @@ contract QueryData {
             while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
                 (, int128 liquidityNet, , , int24 prevTick, int24 nextTick, , , ) = IAlgebraPool(pool).ticks(currTick);
 
-                int256 data = int256(uint256(int256(currTick)) << 128) + liquidityNet;
+                int256 data = int256(uint256(int256(currTick)) << 128) +
+                    (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                 if (currTick == prevTick) {
@@ -654,7 +659,9 @@ contract QueryData {
                             (uint128 sellingX, , , , , uint128 sellingY, , , , ) = IZumiPool(pool).limitOrderData(tick);
                             if (sellingX != 0 || sellingY != 0) {
                                 orders[local.index1] = int24(tick);
-                                sellingArr[local.index1] = (uint256(sellingX) << 128) | sellingY;
+                                sellingArr[local.index1] =
+                                    (uint256(sellingX) << 128) +
+                                    (sellingY & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
 
                                 local.index1++;
                             }
