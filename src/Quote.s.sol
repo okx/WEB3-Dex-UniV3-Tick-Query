@@ -139,12 +139,34 @@ contract UniV3QuoteTest is Test {
         }
     }
 
-    function test_querySupper() public {
+    function _test_querySupper() public {
         (int24[] memory ticks, int128[] memory lp) = query.queryUniv3TicksSuper(address(WETH_USDC), 500);
         console2.log("len", ticks.length);
         for (uint256 i = 0; i < ticks.length; i++) {
             console2.log("tick: %d", ticks[i]);
             console2.log("l: %d", lp[i]);
+        }
+    }
+
+    function test_querySupper2() public {
+        bytes memory tickInfo = query.queryUniv3TicksSuperCompact(address(WETH_USDC), 500);
+        uint256 len;
+        uint256 offset;
+        console2.logBytes(tickInfo);
+
+        assembly {
+            len := mload(tickInfo)
+            offset := add(tickInfo, 32)
+        }
+        console2.log("len", len);
+        for (uint256 i = 0; i < len / 32; i++) {
+            int256 res;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+            }
+            console2.log("tick: %d", int128(res >> 128));
+            console2.log("l: %d", int128(res));
         }
     }
 }

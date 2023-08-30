@@ -480,6 +480,83 @@ contract QueryData {
         return (ticks, liquidityNets);
     }
 
+    function queryUniv3TicksSuperCompact(address pool, uint256 len) public view returns (bytes memory) {
+        SuperVar memory tmp;
+        tmp.tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+        (, tmp.currTick,,,,,) = IUniswapV3Pool(pool).slot0();
+        tmp.right = tmp.currTick / tmp.tickSpacing / int24(256);
+        tmp.leftMost = -887272 / tmp.tickSpacing / int24(256) - 2;
+        tmp.rightMost = 887272 / tmp.tickSpacing / int24(256) + 1;
+
+        if (tmp.currTick < 0) {
+            tmp.initPoint = 256 - ((uint256(int256(-tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256);
+        } else {
+            tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
+        }
+        tmp.initPoint2 = tmp.initPoint;
+
+        if (tmp.currTick < 0) tmp.right--;
+
+        bytes memory tickInfo;
+
+        tmp.left = tmp.right;
+
+        uint256 index = 0;
+
+        while (index < len / 2 && tmp.right < tmp.rightMost) {
+            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(tmp.right));
+            if (res > 0) {
+                res = res >> tmp.initPoint;
+                for (uint256 i = tmp.initPoint; i < 256 && index < len / 2; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * tmp.right + int256(i)) * tmp.tickSpacing);
+                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                        index++;
+                    }
+
+                    res = res >> 1;
+                }
+                tmp.initPoint = 0;
+            }
+
+            tmp.right++;
+        }
+        bool isInitPoint = true;
+        while (index < len && tmp.left > tmp.leftMost) {
+            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(tmp.left));
+            if (res > 0) {
+                res = isInitPoint ? res << tmp.initPoint2 : res;
+                for (uint256 i = tmp.initPoint2; i >= 0 && index < len; i--) {
+                    uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * tmp.left + int256(i)) * tmp.tickSpacing);
+                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                        index++;
+                    }
+
+                    res = res << 1;
+                    if (i == 0) break;
+                }
+                isInitPoint = false;
+                tmp.initPoint2 = 255;
+            }
+
+            tmp.left--;
+        }
+        return tickInfo;
+    }
+
     function queryHorizonTicksPool(address pool, int24 currTick, uint256 iteration, bool direction)
         public
         view
