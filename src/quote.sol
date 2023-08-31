@@ -347,9 +347,8 @@ contract QueryData {
 
                     res = res >> 1;
                 }
-                tmp.initPoint = 0;
             }
-
+            tmp.initPoint = 0;
             tmp.right++;
         }
         bool isInitPoint = true;
@@ -373,9 +372,9 @@ contract QueryData {
                     res = res << 1;
                     if (i == 0) break;
                 }
-                isInitPoint = false;
-                tmp.initPoint2 = 255;
             }
+            isInitPoint = false;
+            tmp.initPoint2 = 255;
 
             tmp.left--;
         }
