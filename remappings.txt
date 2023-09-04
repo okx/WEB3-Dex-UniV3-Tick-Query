@@ -6,3 +6,5 @@ forge-std/=lib/forge-std/src/
 @horizon/contracts/=lib/contracts/
 @Algebra/contracts/=lib/Algebra/src/core/contracts/
 @izumi/contracts/=lib/iZiSwap-core/contracts/
+solmate/=lib/solmate/src/
+@UniswapV3/core/contracts/=lib/v3-core/contracts/

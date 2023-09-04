@@ -6,8 +6,10 @@ lib/contracts
 lib/forge-std
 lib/openzeppelin-contracts
 lib/openzeppelin-contracts-upgradeable
+lib/v3-core
 lib/iZiSwap-core
-lib/
+lib/solmate
+# lib/
 # Ignores development broadcast logs
 broadcast
 /broadcast/*/31337/

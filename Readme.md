@@ -6,6 +6,7 @@ forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v4.8.3 --no-git
 forge install izumiFinance/iZiSwap-core --no-git
 forge install foundry-rs/forge-std --no-git
 forge install cryptoalgebra/Algebra --no-git
+forge install Uniswap/v3-core --no-git
 ```
 
 # deploy
