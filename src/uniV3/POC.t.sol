@@ -39,12 +39,9 @@ contract Minter {
     function mint() public {
         pool.mint(address(this), int24(-2), int24(-1), 1 ether, "");
         pool.mint(address(this), int24(0), int24(10), 1 ether, "");
-        
     }
 
-    function uniswapV3MintCallback(uint256 qty0, uint256 qty1, bytes memory data)
-        public
-    {
+    function uniswapV3MintCallback(uint256 qty0, uint256 qty1, bytes memory data) public {
         tokenA.mint(msg.sender, qty0);
         tokenB.mint(msg.sender, qty1);
     }
@@ -62,15 +59,11 @@ contract Swapper {
     }
 
     function swap() public {
-        pool.swap(address(this), false, int256(10**10), pool.getSqrtRatioAtTick(200) - 1, "");
+        pool.swap(address(this), false, int256(10 ** 10), pool.getSqrtRatioAtTick(200) - 1, "");
         // pool.swap(address(this), true, int256(1 ether), pool.getSqrtRatioAtTick(-200) + 1, "");
     }
 
-    function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
-        bytes calldata data
-    ) external {
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external {
         if (amount0Delta > 0) {
             tokenA.mint(msg.sender, uint256(amount0Delta));
         }
@@ -93,9 +86,7 @@ contract UniV3Test is Test {
         tokenA = new TokenA();
         require(address(tokenA) < address(tokenB), "not ok");
         factory = new UniswapV3Factory();
-        pool = UniswapV3Pool(
-            factory.createPool(address(tokenA), address(tokenB), uint24(100))
-        );
+        pool = UniswapV3Pool(factory.createPool(address(tokenA), address(tokenB), uint24(100)));
         pool.initialize(pool.getSqrtRatioAtTick(0));
         minter = new Minter(tokenA, tokenB, pool);
         swapper = new Swapper(tokenA, tokenB, pool);
@@ -105,7 +96,4 @@ contract UniV3Test is Test {
     function test_1() public {
         swapper.swap();
     }
-    
-
-
 }

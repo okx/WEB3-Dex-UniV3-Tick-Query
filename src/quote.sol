@@ -463,4 +463,100 @@ contract QueryData {
         }
         return tickInfo;
     }
+
+    function getBoundry(int24 tickSpacing, int24 leftPoint, int24 rightPoint)
+        internal
+        pure
+        returns (int24 left, int24 right, uint256 initPoint)
+    {
+        left = leftPoint / tickSpacing / int24(256);
+        if (leftPoint < 0) {
+            initPoint = 256 - ((uint256(int256(-leftPoint)) / uint256(int256(tickSpacing))) % 256);
+        } else {
+            initPoint = (uint256(int256(leftPoint)) / uint256(int256(tickSpacing))) % 256;
+        }
+
+        right = rightPoint / tickSpacing / int24(256);
+        // fix-bug: -2 /100 = 0; 2/100 = 0; to avoid -2 and 2 use the same world, make the -2 store inside world -1, 2 store inside world 0
+        if (leftPoint < 0) left--;
+        if (rightPoint < 0) right--;
+    }
+
+    struct Var {
+        int24 tickSpacing;
+        int24 left;
+        int24 right;
+        uint256 initPoint;
+        uint256 index0;
+        uint256 index1;
+    }
+
+    function queryIzumiTicksPool(address pool, int24 leftPoint, int24 rightPoint, uint256 len)
+        public
+        view
+        returns (
+            int24[] memory ticks,
+            int128[] memory liquidityNets,
+            int24[] memory orders,
+            uint256[] memory sellingArr
+        )
+    {
+        Var memory local;
+        local.tickSpacing = IZumiPool(pool).pointDelta();
+        (local.left, local.right, local.initPoint) = getBoundry(local.tickSpacing, leftPoint, rightPoint);
+        if (len == 0) {
+            len = uint256(int256((rightPoint - leftPoint) / local.tickSpacing));
+        }
+        ticks = new int24[](len);
+        liquidityNets = new int128[](len);
+        orders = new int24[](len);
+        sellingArr = new uint256[](len);
+
+        while (local.left < local.right + 1) {
+            uint256 res = IZumiPool(pool).pointBitmap(int16(local.left));
+            if (res > 0) {
+                res = res >> local.initPoint;
+                for (uint256 i = local.initPoint; i < 256; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int24 tick = int24(int256((256 * local.left + int256(i)) * local.tickSpacing));
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / local.tickSpacing);
+                        if (orderOrEndpoint & 0x01 == 0x01) {
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
+                            if (liquidityNet != 0) {
+                                ticks[local.index0] = int24(tick);
+                                liquidityNets[local.index0] = liquidityNet;
+
+                                local.index0++;
+                            }
+                        }
+                        if (orderOrEndpoint & 0x02 == 0x02) {
+                            (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
+                            if (sellingX != 0 || sellingY != 0) {
+                                orders[local.index1] = int24(tick);
+                                sellingArr[local.index1] = (uint256(sellingX) << 128)
+                                    + (sellingY & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+
+                                local.index1++;
+                            }
+                        }
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            local.initPoint = 0;
+            local.left++;
+        }
+        uint256 index0 = local.index0;
+        uint256 index1 = local.index1;
+        assembly {
+            mstore(ticks, index0)
+            mstore(liquidityNets, index0)
+            mstore(orders, index1)
+            mstore(sellingArr, index1)
+            // mstore(sellingYArr, index1)
+        }
+        return (ticks, liquidityNets, orders, sellingArr);
+    }
 }

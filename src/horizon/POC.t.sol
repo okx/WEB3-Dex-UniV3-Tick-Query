@@ -43,7 +43,6 @@ contract Minter {
         pool.mint(address(this), int24(0), int24(1), ticksPrevious, 1 ether, "");
     }
 
-
     function mintCallback(uint256 qty0, uint256 qty1, bytes memory data) public {
         tokenA.mint(qty0);
         tokenB.mint(qty1);
@@ -51,6 +50,7 @@ contract Minter {
         tokenB.transfer(msg.sender, qty1);
     }
 }
+
 contract Swapper {
     TokenA tokenA;
     TokenB tokenB;
@@ -65,26 +65,22 @@ contract Swapper {
     function swap() public {
         // pool.swap(address(this), int256(10**10), false, pool.getSqrtRatioAtTick(887272) - 1, "");
         console2.log("====================================================");
-        pool.swap(address(this), int256(10**10), true, pool.getSqrtRatioAtTick(-887272) + 1, "");
-        
+        pool.swap(address(this), int256(10 ** 10), true, pool.getSqrtRatioAtTick(-887272) + 1, "");
     }
-
 
     function swapCallback(int256 qty0, int256 qty1, bytes memory data) public {
         if (qty0 > 0) {
-            uint amount = uint(qty0);
+            uint256 amount = uint256(qty0);
             tokenA.mint(amount);
 
             tokenA.transfer(msg.sender, amount);
-
         }
-        if (qty1 > 0 ){
-            uint amount = uint(qty1);
+        if (qty1 > 0) {
+            uint256 amount = uint256(qty1);
             tokenB.mint(amount);
 
             tokenB.transfer(msg.sender, amount);
         }
-        
     }
 }
 
@@ -116,7 +112,6 @@ contract HorizonTest is Test {
     }
 
     function test_1() public {
-        
         // minter.mint2();
         // pool.poolData();
         // bytes32 positionIndex = keccak256(abi.encodePacked(address(minter), int24(-2), int24(-1)));
