@@ -237,6 +237,37 @@ interface IAlgebraPool {
     function tickTable(int16 wordPosition) external view returns (uint256);
 }
 
+interface IAlgebraPoolV1_9 {
+    function globalState()
+        external
+        view
+        returns (
+            uint160 price,
+            int24 tick,
+            int24 prevInitializedTick,
+            uint16 fee,
+            uint16 timepointIndex,
+            uint8 communityFee,
+            bool unlocked
+        );
+
+    function tickSpacing() external view returns (int24);
+    function ticks(int24 tick)
+        external
+        view
+        returns (
+            uint128 liquidityTotal,
+            int128 liquidityDelta,
+            uint256 outerFeeGrowth0Token,
+            uint256 outerFeeGrowth1Token,
+            int56 outerTickCumulative,
+            uint160 outerSecondsPerLiquidity,
+            uint32 outerSecondsSpent,
+            bool initialized
+        );
+    function tickTable(int16 wordPosition) external view returns (uint256);
+}
+
 interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 
 /// @title DexNativeRouter
@@ -245,54 +276,7 @@ contract QueryData {
     int24 internal constant MIN_TICK_MINUS_1 = -887272 - 1;
     int24 internal constant MAX_TICK_PLUS_1 = 887272 + 1;
 
-    function queryUniv3TicksPool3Compact(address pool, int24 leftPoint, int24 rightPoint)
-        public
-        view
-        returns (bytes memory)
-    {
-        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
-        int24 left = leftPoint / tickSpacing / int24(256);
-        uint256 initPoint;
-        if (leftPoint < 0) {
-            initPoint = 256 - ((uint256(int256(-leftPoint)) / uint256(int256(tickSpacing))) % 256);
-        } else {
-            initPoint = (uint256(int256(leftPoint)) / uint256(int256(tickSpacing))) % 256;
-        }
 
-        int24 right = rightPoint / tickSpacing / int24(256);
-        // fix-bug: -2 /100 = 0; 2/100 = 0; to avoid -2 and 2 use the same world, make the -2 store inside world -1, 2 store inside world 0
-        if (leftPoint < 0) left--;
-        if (rightPoint < 0) right--;
-
-        bytes memory tickInfo = hex"";
-
-        uint256 index = 0;
-        while (left < right + 1) {
-            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(left));
-            if (res > 0) {
-                res = res >> initPoint;
-                for (uint256 i = initPoint; i < 256; i++) {
-                    uint256 isInit = res & 0x01;
-                    if (isInit > 0) {
-                        int256 tick = int256((256 * left + int256(i)) * tickSpacing);
-                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
-
-                        int256 data = int256(tick << 128)
-                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
-                        tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-
-                        index++;
-                    }
-
-                    res = res >> 1;
-                }
-            }
-            initPoint = 0;
-            left++;
-        }
-
-        return tickInfo;
-    }
 
     struct SuperVar {
         int24 tickSpacing;
@@ -308,7 +292,16 @@ contract QueryData {
     function queryUniv3TicksSuperCompact(address pool, uint256 len) public view returns (bytes memory) {
         SuperVar memory tmp;
         tmp.tickSpacing = IUniswapV3Pool(pool).tickSpacing();
-        (, tmp.currTick,,,,,) = IUniswapV3Pool(pool).slot0();
+        // fix-bug: pancake pool's slot returns different types of params than uniV3, which will cause problem
+        {
+            (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("slot0"));
+            int24 currTick;
+            assembly {
+                currTick := mload(add(slot0, 64))
+            }
+            tmp.currTick = currTick;
+        }
+
         tmp.right = tmp.currTick / tmp.tickSpacing / int24(256);
         tmp.leftMost = -887272 / tmp.tickSpacing / int24(256) - 2;
         tmp.rightMost = 887272 / tmp.tickSpacing / int24(256) + 1;
@@ -361,6 +354,82 @@ contract QueryData {
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.left + int256(i)) * tmp.tickSpacing);
                         (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                        index++;
+                    }
+
+                    res = res << 1;
+                    if (i == 0) break;
+                }
+            }
+            isInitPoint = false;
+            tmp.initPoint2 = 255;
+
+            tmp.left--;
+        }
+        return tickInfo;
+    }
+
+    function queryAlgebraTicksSuperCompact(address pool, uint256 len) public view returns (bytes memory) {
+        SuperVar memory tmp;
+
+        (, tmp.currTick,,,,,) = IAlgebraPoolV1_9(pool).globalState();
+        tmp.right = tmp.currTick / int24(256);
+        tmp.leftMost = -887272 / int24(256) - 2;
+        tmp.rightMost = 887272 / int24(256) + 1;
+
+        if (tmp.currTick < 0) {
+            tmp.initPoint = 256 - (uint256(int256(-tmp.currTick)) % 256);
+        } else {
+            tmp.initPoint = uint256(int256(tmp.currTick)) % 256;
+        }
+        tmp.initPoint2 = tmp.initPoint;
+
+        if (tmp.currTick < 0) tmp.right--;
+
+        bytes memory tickInfo;
+
+        tmp.left = tmp.right;
+
+        uint256 index = 0;
+
+        while (index < len / 2 && tmp.right < tmp.rightMost) {
+            uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(tmp.right));
+            if (res > 0) {
+                res = res >> tmp.initPoint;
+                for (uint256 i = tmp.initPoint; i < 256 && index < len / 2; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * tmp.right + int256(i)));
+                        (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
+
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                        index++;
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            tmp.initPoint = 0;
+            tmp.right++;
+        }
+        bool isInitPoint = true;
+        while (index < len && tmp.left > tmp.leftMost) {
+            uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(tmp.left));
+            if (res > 0) {
+                res = isInitPoint ? res << tmp.initPoint2 : res;
+                for (uint256 i = tmp.initPoint2; i >= 0 && index < len; i--) {
+                    uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * tmp.left + int256(i)));
+                        (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
 
                         int256 data = int256(uint256(int256(tick)) << 128)
                             + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);

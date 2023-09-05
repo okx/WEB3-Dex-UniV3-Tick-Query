@@ -36,18 +36,24 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork("https://eth.llamarpc.com");
-        vm.startBroadcast(deployer);
-        require(block.chainid == 1, "must be etherum");
-        query = new QueryData();
-        console2.log("query address", address(query));
-        vm.stopBroadcast();
+        // vm.createSelectFork("https://eth.llamarpc.com");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 1, "must be etherum");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
         // vm.createSelectFork("https://arb-mainnet-public.unifra.io");
         // vm.startBroadcast(deployer);
         // require(block.chainid == 42161, "must be etherum");
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
+        vm.createSelectFork("https://base.meowrpc.com");
+        vm.startBroadcast(deployer);
+        require(block.chainid == 8453, "must be base");
+        query = new QueryData();
+        console2.log("query address", address(query));
+        vm.stopBroadcast();
     }
 }
 
@@ -58,8 +64,8 @@ contract UniV3QuoteTest is Test {
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 17990681);
-        query = new QueryData();
+        // vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 17990681);
+        // query = new QueryData();
     }
 
     // function _test_query1() public {
@@ -152,6 +158,7 @@ contract UniV3QuoteTest is Test {
     // }
 
     // function _test_querySupper() public {
+
     //     (int24[] memory ticks, int128[] memory lp) = query.queryUniv3TicksSuper(address(WETH_USDC), 500);
     //     console2.log("len", ticks.length);
     //     for (uint256 i = 0; i < ticks.length; i++) {
@@ -161,7 +168,10 @@ contract UniV3QuoteTest is Test {
     // }
 
     function test_querySupper2() public {
-        bytes memory tickInfo = query.queryUniv3TicksSuperCompact(address(WETH_USDC), 500);
+        vm.createSelectFork(vm.envString("BASE_RPC_URL"), 3555583);
+        // query = QueryData(0x627fd455849665685086181Aff520E30F209D34E);
+        query = new QueryData();
+        bytes memory tickInfo = query.queryUniv3TicksSuperCompact(0x268854Be35C96F08b21c6829e122E859b02DD7C3, 500);
         uint256 len;
         uint256 offset;
         console2.logBytes(tickInfo);
@@ -224,46 +234,73 @@ contract UniV3QuoteTest is Test {
 //     }
 // }
 
-// contract AlgebraQuoteTest is Test {
-//     IAlgebraPool WETH_USDC = IAlgebraPool(0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f);
-//     QueryData query;
+contract AlgebraQuoteTest is Test {
+    IAlgebraPool WETH_USDC = IAlgebraPool(0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f);
+    QueryData query;
 
-//     function setUp() public {
-//         vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
-//         query = new QueryData();
-//     }
+    function setUp() public {
+        // vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
+        // query = new QueryData();
+    }
 
-//     function test_query() public {
-//         bytes memory tickInfo =
-//             query.queryAlgebraTicksPoolCompact(address(WETH_USDC), int24(887273), uint256(100), false);
-//         uint256 len;
-//         uint256 offset;
-//         console2.logBytes(tickInfo);
+    // function test_query() public {
+    //     vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
+    //     query = new QueryData();
+    //     bytes memory tickInfo =
+    //         query.queryAlgebraTicksPoolCompact(address(WETH_USDC), int24(887273), uint256(100), false);
+    //     uint256 len;
+    //     uint256 offset;
+    //     console2.logBytes(tickInfo);
 
-//         assembly {
-//             len := mload(tickInfo)
-//             offset := add(tickInfo, 32)
-//         }
-//         for (uint256 i = 0; i < len / 32; i++) {
-//             int256 res;
-//             assembly {
-//                 res := mload(offset)
-//                 offset := add(offset, 32)
-//             }
-//             console2.log("tick: %d", int128(res >> 128));
-//             console2.log("l: %d", int128(res));
-//         }
-//     }
+    //     assembly {
+    //         len := mload(tickInfo)
+    //         offset := add(tickInfo, 32)
+    //     }
+    //     for (uint256 i = 0; i < len / 32; i++) {
+    //         int256 res;
+    //         assembly {
+    //             res := mload(offset)
+    //             offset := add(offset, 32)
+    //         }
+    //         console2.log("tick: %d", int128(res >> 128));
+    //         console2.log("l: %d", int128(res));
+    //     }
+    // }
 
-//     function test_query2() public {
-//         (int24[] memory ticks, int128[] memory lps) =
-//             query.queryAlgebraTicksPool(address(WETH_USDC), int24(887273), uint256(100), false);
-//         for (uint256 i = 0; i < ticks.length; i++) {
-//             console2.log("tick", ticks[i]);
-//             console2.log("lps ", lps[i]);
-//         }
-//     }
-// }
+    // function test_query2() public {
+    //     (int24[] memory ticks, int128[] memory lps) =
+    //         query.queryAlgebraTicksPool(address(WETH_USDC), int24(887273), uint256(100), false);
+    //     for (uint256 i = 0; i < ticks.length; i++) {
+    //         console2.log("tick", ticks[i]);
+    //         console2.log("lps ", lps[i]);
+    //     }
+    // }
+    // function test_queryBase() public {
+    //     vm.createSelectFork("https://base-mainnet.public.blastapi.io", 3553312);
+    //     address pool = 0xC2f9C81cd84f04c159c55A68C8EF3ad86f66105C;
+    //     query = new QueryData();
+    //     console2.log("aaa");
+    //     // QueryData query = QueryData(0x7c569c320A8a879C834d09FDB6e3276Ee6f18f41);
+    //     // bytes memory tickInfo = query.queryAlgebraTicksSuperCompact(address(pool), 10);
+    //     bytes memory tickInfo = hex"00000000000000000000000000000a8cfffffffffffffffffff63c053df3805bfffffffffffffffffffffffffffff48400000000000000000009c3fac20c7fa5";
+    //     uint256 len;
+    //     uint256 offset;
+
+    //     assembly {
+    //         len := mload(tickInfo)
+    //         offset := add(tickInfo, 32)
+    //     }
+    //     for (uint256 i = 0; i < len / 32; i++) {
+    //         int256 res;
+    //         assembly {
+    //             res := mload(offset)
+    //             offset := add(offset, 32)
+    //         }
+    //         console2.log("tick: %d", int128(res >> 128));
+    //         console2.log("l: %d", int128(res));
+    //     }
+    // }
+}
 
 // contract IZumiQuoteTest is Test {
 //     address WBNB_USDT = 0x1CE3082de766ebFe1b4dB39f616426631BbB29aC;
