@@ -235,6 +235,7 @@ interface IAlgebraPool {
         );
 
     function tickTable(int16 wordPosition) external view returns (uint256);
+    function prevInitializedTick() external view returns (int24);
 }
 
 interface IAlgebraPoolV1_9 {
@@ -275,8 +276,6 @@ interface IUniswapV3Pool is IUniswapV3PoolImmutables, IUniswapV3PoolState {}
 contract QueryData {
     int24 internal constant MIN_TICK_MINUS_1 = -887272 - 1;
     int24 internal constant MAX_TICK_PLUS_1 = 887272 + 1;
-
-
 
     struct SuperVar {
         int24 tickSpacing;
@@ -450,86 +449,93 @@ contract QueryData {
         return tickInfo;
     }
 
-    function queryHorizonTicksPoolCompact(address pool, int24 currTick, uint256 iteration, bool direction)
-        public
-        view
-        returns (bytes memory)
-    {
-        if (currTick == MAX_TICK_PLUS_1) {
-            (,, currTick,) = IHorizonPool(pool).getPoolState();
-        }
+    function queryHorizonTicksSuperCompact(address pool, uint256 iteration) public view returns (bytes memory) {
+        (,, int24 currTick,) = IHorizonPool(pool).getPoolState();
+        int24 currTick2 = currTick;
+        uint256 threshold = iteration / 2;
+
         // travel from left to right
         bytes memory tickInfo;
-        if (direction) {
-            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
-                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
 
-                int256 data = int256(uint256(int256(currTick)) << 128)
-                    + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
-                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-                (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
-                if (currTick == nextTick) {
-                    break;
-                }
-                currTick = nextTick;
-                iteration--;
+        while (currTick < MAX_TICK_PLUS_1 && iteration > threshold) {
+            (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
+
+            int256 data = int256(uint256(int256(currTick)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+            (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
+            if (currTick == nextTick) {
+                break;
             }
-        } else {
-            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
-                (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
-                int256 data = int256(uint256(int256(currTick)) << 128)
-                    + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
-                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-                (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick);
-                if (prevTick == currTick) {
-                    break;
-                }
-                currTick = prevTick;
-                iteration--;
-            }
+            currTick = nextTick;
+            iteration--;
         }
+
+        while (currTick2 > MIN_TICK_MINUS_1 && iteration > 0) {
+            (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick2);
+            int256 data = int256(uint256(int256(currTick2)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+            (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick2);
+            if (prevTick == currTick2) {
+                break;
+            }
+            currTick2 = prevTick;
+            iteration--;
+        }
+
         return tickInfo;
     }
 
-    function queryAlgebraTicksPoolCompact(address pool, int24 currTick, uint256 iteration, bool direction)
-        public
-        view
-        returns (bytes memory)
-    {
-        if (currTick == MAX_TICK_PLUS_1) {
-            (,, currTick,,,,) = IAlgebraPool(pool).globalState();
+    function queryAlgebraTicksSuperCompact2(address pool, uint256 iteration) public view returns (bytes memory) {
+        int24 currTick;
+        {
+            (bool s, bytes memory res) = pool.staticcall(abi.encodeWithSignature("prevInitializedTick()"));
+            if (s) {
+                currTick = abi.decode(res, (int24));
+            } else {
+                (s, res) = pool.staticcall(abi.encodeWithSignature("globalState()"));
+                if (s) {
+                    assembly {
+                        currTick := mload(add(res, 96))
+                    }
+                }
+            }
         }
+
+        int24 currTick2 = currTick;
+        uint256 threshold = iteration / 2;
         // travel from left to right
         bytes memory tickInfo;
-        if (direction) {
-            while (currTick < MAX_TICK_PLUS_1 && iteration > 0) {
-                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
 
-                int256 data = int256(uint256(int256(currTick)) << 128)
-                    + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
-                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+        while (currTick < MAX_TICK_PLUS_1 && iteration > threshold) {
+            (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
 
-                if (currTick == nextTick) {
-                    break;
-                }
-                currTick = nextTick;
-                iteration--;
+            int256 data = int256(uint256(int256(currTick)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+            if (currTick == nextTick) {
+                break;
             }
-        } else {
-            while (currTick > MIN_TICK_MINUS_1 && iteration > 0) {
-                (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
-
-                int256 data = int256(uint256(int256(currTick)) << 128)
-                    + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
-                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-
-                if (currTick == prevTick) {
-                    break;
-                }
-                currTick = prevTick;
-                iteration--;
-            }
+            currTick = nextTick;
+            iteration--;
         }
+
+        while (currTick2 > MIN_TICK_MINUS_1 && iteration > 0) {
+            (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick2);
+
+            int256 data = int256(uint256(int256(currTick2)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+            if (currTick2 == prevTick) {
+                break;
+            }
+            currTick2 = prevTick;
+            iteration--;
+        }
+
         return tickInfo;
     }
 
