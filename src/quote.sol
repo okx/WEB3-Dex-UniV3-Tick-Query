@@ -293,7 +293,7 @@ contract QueryData {
         tmp.tickSpacing = IUniswapV3Pool(pool).tickSpacing();
         // fix-bug: pancake pool's slot returns different types of params than uniV3, which will cause problem
         {
-            (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("slot0"));
+            (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("slot0()"));
             int24 currTick;
             assembly {
                 currTick := mload(add(slot0, 64))
