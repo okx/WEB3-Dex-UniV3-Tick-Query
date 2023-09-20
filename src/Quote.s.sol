@@ -352,17 +352,16 @@ contract IZumiQuoteTest is Test {
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://binance.nodereal.io",31903446);
+        vm.createSelectFork("https://binance.nodereal.io", 31903446);
         query = new QueryData();
     }
 
     // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
 
-
     function test_2() public {
         query.queryIzumiSuperCompact(WBNB_USDT, 200);
-
     }
+
     function test_compare() public {
         address pool = WBNB_USDT;
         int24 tickSpacing = IZumiPool(pool).pointDelta();
@@ -391,7 +390,6 @@ contract IZumiQuoteTest is Test {
                 }
             }
             leftMost++;
-        
         }
     }
 }

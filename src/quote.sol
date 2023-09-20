@@ -427,9 +427,10 @@ contract QueryData {
         bool isInitPoint = true;
         while (index < len && tmp.left > tmp.leftMost) {
             uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(tmp.left));
-            if (res > 0) {
-                res = isInitPoint ? res >> tmp.initPoint2 : res;
-                for (uint256 i = tmp.initPoint2; i >= 0 && index < len; i--) {
+            if (res > 0 && tmp.initPoint2 != 0) {
+                res = isInitPoint ? res << ((256 - tmp.initPoint2) % 256) : res;
+
+                for (uint256 i = tmp.initPoint2 - 1; i >= 0 && index < len; i--) {
                     uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.left + int256(i)));
@@ -447,7 +448,7 @@ contract QueryData {
                 }
             }
             isInitPoint = false;
-            tmp.initPoint2 = 255;
+            tmp.initPoint2 = 256;
 
             tmp.left--;
         }
@@ -544,28 +545,27 @@ contract QueryData {
         return tickInfo;
     }
     /**
-    算法逻辑:
-    1. 查到slot0对应的currTick和tickSpacing
-    2. 根据currTick算出当前的word, 如果currTick < 0, 则word--. 原因是 tick 1 和 tick -1在除以256之后的word都是0, 为了区别, 将tick -1 存放在 word=-1的map上
-    3. 查到currTick对应的initPoint, 即currTick在tickMap里面的index, index值的取值范围只能是 [0, 255], 所以需要对256 取模. 利用的是 currTick/tickSpacing = index + (currTick/tickSpacing//256 - 0 ? 1)* 256
-    4. 分成两个方向进行遍历, 第一个方向从小到大, 第二个方向从大到小
-    假设tickMap查出来的结果如下: 10101010 (8bit 方便理解), initPoint = 3, 即: 1010[1]010
-    5. 方向从小到大:
-    5.1 首先把结果res向右移动initPoint位,得到新的结果如下: 00010101. 移动过后,左侧用0补齐
-    5.2 取res中的最右侧元素与0b00000001进行比较, 如果为true, 此时最右侧元素的index即为原先的initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
-    5.3 然后根据index 和 right值, 重新利用公式 (index + 256 * right) * tickSpacing = tick 算出tick
-    5.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
-    5.5 循环开始条件即为 i = initPoint, 循环次数应该为: 256 - initPoint, 即循环条件为 i < 256, 方向为 i++
-    6. 方向从大到小:
-    6.1 首先把结果res向左移动256-initPoint位, 得到新的结果如下: 01000000, 移动过后, 右侧用0补齐
-    6.2 去res中的最左侧元素与0b10000000进行比较, 如果为true, 说明有流动性. 注意此时的index为原先的initPoint - 1, 而不是initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
-    6.3 然后根据index 和 left, 重新利用公式 (index + 256 * left) * tickSpacing = tick 算出tick
-    6.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
-    6.5 循环的开始条件即为 i = initPoint - 1, 循环次数为: initPoint次, 即循环条件为 i >= 0, 方向为 i--
-
-    问题是:
-    initPoint = 0时, 方向从大到小应该怎么处理? 此时应该进入下一个循环.
-
+     * 算法逻辑:
+     * 1. 查到slot0对应的currTick和tickSpacing
+     * 2. 根据currTick算出当前的word, 如果currTick < 0, 则word--. 原因是 tick 1 和 tick -1在除以256之后的word都是0, 为了区别, 将tick -1 存放在 word=-1的map上
+     * 3. 查到currTick对应的initPoint, 即currTick在tickMap里面的index, index值的取值范围只能是 [0, 255], 所以需要对256 取模. 利用的是 currTick/tickSpacing = index + (currTick/tickSpacing//256 - 0 ? 1)* 256
+     * 4. 分成两个方向进行遍历, 第一个方向从小到大, 第二个方向从大到小
+     * 假设tickMap查出来的结果如下: 10101010 (8bit 方便理解), initPoint = 3, 即: 1010[1]010
+     * 5. 方向从小到大:
+     * 5.1 首先把结果res向右移动initPoint位,得到新的结果如下: 00010101. 移动过后,左侧用0补齐
+     * 5.2 取res中的最右侧元素与0b00000001进行比较, 如果为true, 此时最右侧元素的index即为原先的initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
+     * 5.3 然后根据index 和 right值, 重新利用公式 (index + 256 * right) * tickSpacing = tick 算出tick
+     * 5.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
+     * 5.5 循环开始条件即为 i = initPoint, 循环次数应该为: 256 - initPoint, 即循环条件为 i < 256, 方向为 i++
+     * 6. 方向从大到小:
+     * 6.1 首先把结果res向左移动256-initPoint位, 得到新的结果如下: 01000000, 移动过后, 右侧用0补齐
+     * 6.2 去res中的最左侧元素与0b10000000进行比较, 如果为true, 说明有流动性. 注意此时的index为原先的initPoint - 1, 而不是initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
+     * 6.3 然后根据index 和 left, 重新利用公式 (index + 256 * left) * tickSpacing = tick 算出tick
+     * 6.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
+     * 6.5 循环的开始条件即为 i = initPoint - 1, 循环次数为: initPoint次, 即循环条件为 i >= 0, 方向为 i--
+     * 
+     * 问题是:
+     * initPoint = 0时, 方向从大到小应该怎么处理? 此时应该进入下一个循环.
      */
 
     function queryIzumiSuperCompact(address pool, uint256 len) public view returns (bytes memory, bytes memory) {
@@ -616,7 +616,6 @@ contract QueryData {
                         int24 tick = int24(int256((256 * tmp.right + int256(i)) * tmp.tickSpacing));
                         int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
-                            
                             (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
                                 int256 data = int256(uint256(int256(tick)) << 128)
@@ -637,8 +636,6 @@ contract QueryData {
                                 bytes32 data =
                                     bytes32(abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY)));
                                 limitOrderInfo = bytes.concat(limitOrderInfo, data);
-
-
 
                                 index++;
                             }
@@ -664,7 +661,6 @@ contract QueryData {
 
                         int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
-
                             (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
                                 int256 data = int256(uint256(int256(tick)) << 128)
