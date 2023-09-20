@@ -30,7 +30,7 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        // vm.createSelectFork("https://polygon.llamarpc.com");
+        // vm.createSelectFork("https://polygon-mainnet.g.alchemy.com/v2/demo");
         // vm.startBroadcast(deployer);
         // require(block.chainid == 137, "must be polygon");
         // query = new QueryData();
@@ -42,15 +42,27 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork("https://arb-mainnet-public.unifra.io");
-        vm.startBroadcast(deployer);
-        require(block.chainid == 42161, "must be arbi");
-        query = new QueryData();
-        console2.log("query address", address(query));
-        vm.stopBroadcast();
+        // vm.createSelectFork("https://arb-mainnet-public.unifra.io");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 42161, "must be arbi");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
         // vm.createSelectFork("https://base.meowrpc.com");
         // vm.startBroadcast(deployer);
         // require(block.chainid == 8453, "must be base");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        // vm.createSelectFork("https://binance.llamarpc.com");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 56, "must be bsc");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        // vm.createSelectFork("https://optimism.blockpi.network/v1/rpc/public");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 10, "must be op");
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
@@ -63,10 +75,9 @@ contract UniV3QuoteTest is Test {
     address USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; //0
     QueryData query;
 
-    function setUp() public {
-        
-    }
-    function test_superCompact() public {
+    function setUp() public {}
+
+    function _test_superCompact() public {
         vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 17990681);
         query = new QueryData();
         (, bytes memory res) = address(WETH_USDC).staticcall(abi.encodeWithSignature("slot0()"));
@@ -75,6 +86,12 @@ contract UniV3QuoteTest is Test {
             curr := mload(add(res, 64))
         }
         console2.log(curr);
+    }
+
+    function test_op() public {
+        vm.createSelectFork(vm.envString("OP_RPC_URL"), 109530240);
+        query = new QueryData();
+        query.queryUniv3TicksSuperCompact(0x9C1630da3d6c9d5eF977500478E330b0a56B2f23, 100);
     }
     // function _test_query1() public {
     //     (int24[] memory ticks, int128[] memory lp) =
@@ -175,7 +192,7 @@ contract UniV3QuoteTest is Test {
     //     }
     // }
 
-    function test_querySupper2() public {
+    function _test_querySupper2() public {
         vm.createSelectFork(vm.envString("BASE_RPC_URL"), 3555583);
         // query = QueryData(0x627fd455849665685086181Aff520E30F209D34E);
         query = new QueryData();
@@ -330,22 +347,51 @@ contract AlgebraQuoteTest is Test {
     // }
 }
 
-// contract IZumiQuoteTest is Test {
-//     address WBNB_USDT = 0x1CE3082de766ebFe1b4dB39f616426631BbB29aC;
-//     QueryData query;
+contract IZumiQuoteTest is Test {
+    address WBNB_USDT = 0x1CE3082de766ebFe1b4dB39f616426631BbB29aC;
+    QueryData query;
 
-//     function setUp() public {
-//         vm.createSelectFork("https://bsc-dataseed3.ninicoin.io", 30671548 + 1);
-//         query = new QueryData();
-//     }
+    function setUp() public {
+        vm.createSelectFork("https://binance.nodereal.io",31903446);
+        query = new QueryData();
+    }
 
-//     // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
+    // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
 
-//     function test_query() public {
-//         IZumiPool(WBNB_USDT).factory();
-//         IZumiPool(WBNB_USDT).points(-61760);
-//         IZumiPool(WBNB_USDT).orderOrEndpoint(-61760);
-//         (int24[] memory ticks, int128[] memory liquidityNets, int24[] memory orders, uint256[] memory sellingXArr) =
-//             query.queryIzumiTicksPool(WBNB_USDT, -887272, 0, 0);
-//     }
-// }
+
+    function test_2() public {
+        query.queryIzumiSuperCompact(WBNB_USDT, 200);
+
+    }
+    function test_compare() public {
+        address pool = WBNB_USDT;
+        int24 tickSpacing = IZumiPool(pool).pointDelta();
+
+        int24 leftMost = -887272 / tickSpacing / int24(256) - 2;
+        int24 rightMost = 887272 / tickSpacing / int24(256) + 1;
+        while (leftMost < rightMost) {
+            uint256 res = IZumiPool(pool).pointBitmap(int16(leftMost));
+            if (res > 0) {
+                for (uint256 i = 0; i < 256; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int24 tick = int24(int256((256 * leftMost + int256(i)) * tickSpacing));
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tickSpacing);
+                        if (orderOrEndpoint & 0x01 == 0x01) {
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
+                            console2.log(tick);
+                        }
+                        // if (orderOrEndpoint & 0x02 == 0x02) {
+                        //     (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
+                        //     // console2.log(tick);
+                        // }
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            leftMost++;
+        
+        }
+    }
+}

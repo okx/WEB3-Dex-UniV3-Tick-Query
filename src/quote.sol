@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import "forge-std/console2.sol";
+
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
 
@@ -306,7 +308,10 @@ contract QueryData {
         tmp.rightMost = 887272 / tmp.tickSpacing / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint = 256 - ((uint256(int256(-tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256);
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
@@ -346,9 +351,9 @@ contract QueryData {
         bool isInitPoint = true;
         while (index < len && tmp.left > tmp.leftMost) {
             uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(tmp.left));
-            if (res > 0) {
-                res = isInitPoint ? res << tmp.initPoint2 : res;
-                for (uint256 i = tmp.initPoint2; i >= 0 && index < len; i--) {
+            if (res > 0 && tmp.initPoint2 != 0) {
+                res = isInitPoint ? res << ((256 - tmp.initPoint2) % 256) : res;
+                for (uint256 i = tmp.initPoint2 - 1; i >= 0 && index < len; i--) {
                     uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.left + int256(i)) * tmp.tickSpacing);
@@ -366,7 +371,7 @@ contract QueryData {
                 }
             }
             isInitPoint = false;
-            tmp.initPoint2 = 255;
+            tmp.initPoint2 = 256;
 
             tmp.left--;
         }
@@ -382,7 +387,7 @@ contract QueryData {
         tmp.rightMost = 887272 / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint = 256 - (uint256(int256(-tmp.currTick)) % 256);
+            tmp.initPoint = (256 - (uint256(int256(-tmp.currTick)) % 256)) % 256;
         } else {
             tmp.initPoint = uint256(int256(tmp.currTick)) % 256;
         }
@@ -423,7 +428,7 @@ contract QueryData {
         while (index < len && tmp.left > tmp.leftMost) {
             uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(tmp.left));
             if (res > 0) {
-                res = isInitPoint ? res << tmp.initPoint2 : res;
+                res = isInitPoint ? res >> tmp.initPoint2 : res;
                 for (uint256 i = tmp.initPoint2; i >= 0 && index < len; i--) {
                     uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
                     if (isInit > 0) {
@@ -538,81 +543,104 @@ contract QueryData {
 
         return tickInfo;
     }
+    /**
+    算法逻辑:
+    1. 查到slot0对应的currTick和tickSpacing
+    2. 根据currTick算出当前的word, 如果currTick < 0, 则word--. 原因是 tick 1 和 tick -1在除以256之后的word都是0, 为了区别, 将tick -1 存放在 word=-1的map上
+    3. 查到currTick对应的initPoint, 即currTick在tickMap里面的index, index值的取值范围只能是 [0, 255], 所以需要对256 取模. 利用的是 currTick/tickSpacing = index + (currTick/tickSpacing//256 - 0 ? 1)* 256
+    4. 分成两个方向进行遍历, 第一个方向从小到大, 第二个方向从大到小
+    假设tickMap查出来的结果如下: 10101010 (8bit 方便理解), initPoint = 3, 即: 1010[1]010
+    5. 方向从小到大:
+    5.1 首先把结果res向右移动initPoint位,得到新的结果如下: 00010101. 移动过后,左侧用0补齐
+    5.2 取res中的最右侧元素与0b00000001进行比较, 如果为true, 此时最右侧元素的index即为原先的initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
+    5.3 然后根据index 和 right值, 重新利用公式 (index + 256 * right) * tickSpacing = tick 算出tick
+    5.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
+    5.5 循环开始条件即为 i = initPoint, 循环次数应该为: 256 - initPoint, 即循环条件为 i < 256, 方向为 i++
+    6. 方向从大到小:
+    6.1 首先把结果res向左移动256-initPoint位, 得到新的结果如下: 01000000, 移动过后, 右侧用0补齐
+    6.2 去res中的最左侧元素与0b10000000进行比较, 如果为true, 说明有流动性. 注意此时的index为原先的initPoint - 1, 而不是initPoint. 如果为false, 说明没有流动性, 则进行下一个循环
+    6.3 然后根据index 和 left, 重新利用公式 (index + 256 * left) * tickSpacing = tick 算出tick
+    6.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
+    6.5 循环的开始条件即为 i = initPoint - 1, 循环次数为: initPoint次, 即循环条件为 i >= 0, 方向为 i--
 
-    function getBoundry(int24 tickSpacing, int24 leftPoint, int24 rightPoint)
-        internal
-        pure
-        returns (int24 left, int24 right, uint256 initPoint)
-    {
-        left = leftPoint / tickSpacing / int24(256);
-        if (leftPoint < 0) {
-            initPoint = 256 - ((uint256(int256(-leftPoint)) / uint256(int256(tickSpacing))) % 256);
+    问题是:
+    initPoint = 0时, 方向从大到小应该怎么处理? 此时应该进入下一个循环.
+
+     */
+
+    function queryIzumiSuperCompact(address pool, uint256 len) public view returns (bytes memory, bytes memory) {
+        SuperVar memory tmp;
+        tmp.tickSpacing = IZumiPool(pool).pointDelta();
+        {
+            (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("state()"));
+            int24 currTick;
+            assembly {
+                currTick := mload(add(slot0, 64))
+            }
+            tmp.currTick = currTick;
+        }
+
+        tmp.right = tmp.currTick / tmp.tickSpacing / int24(256);
+        tmp.leftMost = -887272 / tmp.tickSpacing / int24(256) - 2;
+        tmp.rightMost = 887272 / tmp.tickSpacing / int24(256) + 1;
+
+        if (tmp.currTick < 0) {
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
-            initPoint = (uint256(int256(leftPoint)) / uint256(int256(tickSpacing))) % 256;
+            tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
+        tmp.initPoint2 = tmp.initPoint;
+        console2.log(tmp.currTick);
+        console2.log(tmp.tickSpacing);
+        console2.log(tmp.initPoint);
 
-        right = rightPoint / tickSpacing / int24(256);
-        // fix-bug: -2 /100 = 0; 2/100 = 0; to avoid -2 and 2 use the same world, make the -2 store inside world -1, 2 store inside world 0
-        if (leftPoint < 0) left--;
-        if (rightPoint < 0) right--;
-    }
+        if (tmp.currTick < 0) tmp.right--;
 
-    struct Var {
-        int24 tickSpacing;
-        int24 left;
-        int24 right;
-        uint256 initPoint;
-        uint256 index0;
-        uint256 index1;
-    }
+        bytes memory tickInfo;
+        bytes memory limitOrderInfo;
 
-    function queryIzumiTicksPool(address pool, int24 leftPoint, int24 rightPoint, uint256 len)
-        public
-        view
-        returns (
-            int24[] memory ticks,
-            int128[] memory liquidityNets,
-            int24[] memory orders,
-            uint256[] memory sellingArr
-        )
-    {
-        Var memory local;
-        local.tickSpacing = IZumiPool(pool).pointDelta();
-        (local.left, local.right, local.initPoint) = getBoundry(local.tickSpacing, leftPoint, rightPoint);
-        if (len == 0) {
-            len = uint256(int256((rightPoint - leftPoint) / local.tickSpacing));
-        }
-        ticks = new int24[](len);
-        liquidityNets = new int128[](len);
-        orders = new int24[](len);
-        sellingArr = new uint256[](len);
+        tmp.left = tmp.right;
 
-        while (local.left < local.right + 1) {
-            uint256 res = IZumiPool(pool).pointBitmap(int16(local.left));
+        uint256 index = 0;
+
+        while (index < len / 2 && tmp.right < tmp.rightMost) {
+            uint256 res = IZumiPool(pool).pointBitmap(int16(tmp.right));
             if (res > 0) {
-                res = res >> local.initPoint;
-                for (uint256 i = local.initPoint; i < 256; i++) {
+                res = res >> tmp.initPoint;
+                for (uint256 i = tmp.initPoint; i < 256; i++) {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
-                        int24 tick = int24(int256((256 * local.left + int256(i)) * local.tickSpacing));
-                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / local.tickSpacing);
+                        int24 tick = int24(int256((256 * tmp.right + int256(i)) * tmp.tickSpacing));
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
+                            
                             (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
-                                ticks[local.index0] = int24(tick);
-                                liquidityNets[local.index0] = liquidityNet;
+                                int256 data = int256(uint256(int256(tick)) << 128)
+                                    + (
+                                        int256(liquidityNet)
+                                            & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+                                    );
+                                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
-                                local.index0++;
+                                console2.log(tick);
+
+                                index++;
                             }
                         }
                         if (orderOrEndpoint & 0x02 == 0x02) {
                             (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
                             if (sellingX != 0 || sellingY != 0) {
-                                orders[local.index1] = int24(tick);
-                                sellingArr[local.index1] = (uint256(sellingX) << 128)
-                                    + (sellingY & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                                bytes32 data =
+                                    bytes32(abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY)));
+                                limitOrderInfo = bytes.concat(limitOrderInfo, data);
 
-                                local.index1++;
+
+
+                                index++;
                             }
                         }
                     }
@@ -620,18 +648,57 @@ contract QueryData {
                     res = res >> 1;
                 }
             }
-            local.initPoint = 0;
-            local.left++;
+            tmp.initPoint = 0;
+            tmp.right++;
         }
-        uint256 index0 = local.index0;
-        uint256 index1 = local.index1;
-        assembly {
-            mstore(ticks, index0)
-            mstore(liquidityNets, index0)
-            mstore(orders, index1)
-            mstore(sellingArr, index1)
-            // mstore(sellingYArr, index1)
+        console2.log("==============");
+        bool isInitPoint = true;
+        while (index < len && tmp.left > tmp.leftMost) {
+            uint256 res = IZumiPool(pool).pointBitmap(int16(tmp.left));
+            if (res > 0 && tmp.initPoint2 != 0) {
+                res = isInitPoint ? res << ((256 - tmp.initPoint2) % 256) : res;
+                for (uint256 i = tmp.initPoint2 - 1; i >= 0 && index < len; i--) {
+                    uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
+                    if (isInit > 0) {
+                        int24 tick = int24(int256((256 * tmp.left + int256(i)) * tmp.tickSpacing));
+
+                        int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
+                        if (orderOrEndpoint & 0x01 == 0x01) {
+
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
+                            if (liquidityNet != 0) {
+                                int256 data = int256(uint256(int256(tick)) << 128)
+                                    + (
+                                        int256(liquidityNet)
+                                            & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+                                    );
+                                tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+                                console2.log(tick);
+
+                                index++;
+                            }
+                        }
+                        if (orderOrEndpoint & 0x02 == 0x02) {
+                            (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
+                            if (sellingX != 0 || sellingY != 0) {
+                                bytes32 data =
+                                    bytes32(abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY)));
+                                limitOrderInfo = bytes.concat(limitOrderInfo, data);
+
+                                index++;
+                            }
+                        }
+                    }
+                    res = res << 1;
+                    if (i == 0) break;
+                }
+            }
+            isInitPoint = false;
+            tmp.initPoint2 = 256;
+
+            tmp.left--;
         }
-        return (ticks, liquidityNets, orders, sellingArr);
+        return (tickInfo, limitOrderInfo);
     }
 }
