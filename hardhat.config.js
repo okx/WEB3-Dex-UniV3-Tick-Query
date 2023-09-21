@@ -53,7 +53,7 @@ module.exports = {
 
   },
   paths: {
-    sources: './src'
+    sources: './src/quote'
   },
   abiExporter: {
     path: './abi',

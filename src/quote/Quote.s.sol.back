@@ -60,12 +60,12 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        // vm.createSelectFork("https://optimism.blockpi.network/v1/rpc/public");
-        // vm.startBroadcast(deployer);
-        // require(block.chainid == 10, "must be op");
-        // query = new QueryData();
-        // console2.log("query address", address(query));
-        // vm.stopBroadcast();
+        vm.createSelectFork("https://optimism.blockpi.network/v1/rpc/public");
+        vm.startBroadcast(deployer);
+        require(block.chainid == 10, "must be op");
+        query = new QueryData();
+        console2.log("query address", address(query));
+        vm.stopBroadcast();
     }
 }
 
@@ -88,10 +88,58 @@ contract UniV3QuoteTest is Test {
         console2.log(curr);
     }
 
-    function test_op() public {
+    function _test_op() public {
         vm.createSelectFork(vm.envString("OP_RPC_URL"), 109530240);
         query = new QueryData();
         query.queryUniv3TicksSuperCompact(0x9C1630da3d6c9d5eF977500478E330b0a56B2f23, 100);
+    }
+
+    function test_eth() public {
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18182443);
+        query = new QueryData();
+        bytes memory tickInfo = QueryData(0xcAB450888f7F25762EB0710f40B67fF76767aB86).queryUniv3TicksSuperCompact(0x694D149DF9B0d82C92940aD3b8fa10722114ca71, 100);
+        uint256 len;
+        uint256 offset;
+
+        assembly {
+            len := mload(tickInfo)
+            offset := add(tickInfo, 32)
+        }
+        for (uint256 i = 0; i < len / 32; i++) {
+            int256 res;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+            }
+            console2.log("tick: %d", int128(res >> 128));
+            console2.log("l: %d", int128(res));
+        }
+    }
+
+    function test_compare() public {
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18182443);
+        address pool = 0x694D149DF9B0d82C92940aD3b8fa10722114ca71;
+        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+
+        int24 leftMost = -887272 / tickSpacing / int24(256) - 2;
+        int24 rightMost = 887272 / tickSpacing / int24(256) + 1;
+        while (leftMost < rightMost) {
+            uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(leftMost));
+            if (res > 0) {
+                for (uint256 i = 0; i < 256; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int256 tick = int256((256 * leftMost + int256(i)) * tickSpacing);
+                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+                        console2.log(tick);
+                        console2.log(liquidityNet);
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            leftMost++;
+        }
     }
     // function _test_query1() public {
     //     (int24[] memory ticks, int128[] memory lp) =

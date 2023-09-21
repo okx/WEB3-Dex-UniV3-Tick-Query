@@ -8,9 +8,9 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
 
 if (!PRIVATE_KEY) throw "⛔️ Private key not detected! Add it to the .env file!";
 
-// An example of a deploy script that will deploy and call a simple contract.
+// yarn hardhat deploy-zksync --script deploy_zksync.js
 const deploy = async function (hre) {
-    console.log(`Running deploy script for the Greeter contract`);
+    console.log(`Running deploy script for the Quoter contract`);
 
     // Initialize the wallet.
     const wallet = new Wallet(PRIVATE_KEY);

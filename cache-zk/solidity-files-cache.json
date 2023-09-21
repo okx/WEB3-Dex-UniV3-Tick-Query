@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/comcatli/Downloads/Web3-DEX-Univ3-Tick-Query/src/quote.sol": {
-      "lastModificationDate": 1691660660957,
-      "contentHash": "c583ce1f5ca697f4dbd14b325cc0f89a",
-      "sourceName": "src/quote.sol",
+    "/Users/comcatli/Downloads/Web3-DEX-Univ3-Tick-Query/src/quote/quote.sol": {
+      "lastModificationDate": 1695279156339,
+      "contentHash": "6af60170adda573086a9442616f0ea1f",
+      "sourceName": "src/quote/quote.sol",
       "solcConfig": {
         "version": "0.8.17",
         "settings": {
@@ -44,6 +44,7 @@
       ],
       "artifacts": [
         "IAlgebraPool",
+        "IAlgebraPoolV1_9",
         "IHorizonPool",
         "IUniswapV3Pool",
         "IUniswapV3PoolImmutables",
