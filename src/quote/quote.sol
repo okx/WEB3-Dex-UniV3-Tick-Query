@@ -402,7 +402,14 @@ contract QueryData {
     function queryAlgebraTicksSuperCompact(address pool, uint256 len) public view returns (bytes memory) {
         SuperVar memory tmp;
 
-        (, tmp.currTick,,,,,) = IAlgebraPoolV1_9(pool).globalState();
+        {
+            (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("globalState()"));
+            int24 currTick;
+            assembly {
+                currTick := mload(add(slot0, 64))
+            }
+            tmp.currTick = currTick;
+        }
         tmp.right = tmp.currTick / int24(256);
         tmp.leftMost = -887272 / int24(256) - 2;
         tmp.rightMost = 887272 / int24(256) + 1;
@@ -430,7 +437,12 @@ contract QueryData {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.right + int256(i)));
-                        (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
+                        // (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
+                        (, bytes memory deltaL) = pool.staticcall(abi.encodeWithSignature("ticks(int24)", tick));
+                        int128 liquidityNet;
+                        assembly {
+                            liquidityNet := mload(add(deltaL, 64))
+                        }
 
                         int256 data = int256(uint256(int256(tick)) << 128)
                             + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
@@ -455,8 +467,13 @@ contract QueryData {
                     uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.left + int256(i)));
-                        (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
+                        // (, int128 liquidityNet,,,,,,) = IAlgebraPoolV1_9(pool).ticks(int24(int256(tick)));
 
+                        (, bytes memory deltaL) = pool.staticcall(abi.encodeWithSignature("ticks(int24)", tick));
+                        int128 liquidityNet;
+                        assembly {
+                            liquidityNet := mload(add(deltaL, 64))
+                        }
                         int256 data = int256(uint256(int256(tick)) << 128)
                             + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));

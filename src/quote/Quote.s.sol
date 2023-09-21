@@ -42,12 +42,12 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        // vm.createSelectFork("https://arb-mainnet-public.unifra.io");
-        // vm.startBroadcast(deployer);
-        // require(block.chainid == 42161, "must be arbi");
-        // query = new QueryData();
-        // console2.log("query address", address(query));
-        // vm.stopBroadcast();
+        vm.createSelectFork("https://arb-mainnet-public.unifra.io");
+        vm.startBroadcast(deployer);
+        require(block.chainid == 42161, "must be arbi");
+        query = new QueryData();
+        console2.log("query address", address(query));
+        vm.stopBroadcast();
         // vm.createSelectFork("https://base.meowrpc.com");
         // vm.startBroadcast(deployer);
         // require(block.chainid == 8453, "must be base");
@@ -60,12 +60,12 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork("https://optimism.blockpi.network/v1/rpc/public");
-        vm.startBroadcast(deployer);
-        require(block.chainid == 10, "must be op");
-        query = new QueryData();
-        console2.log("query address", address(query));
-        vm.stopBroadcast();
+        // vm.createSelectFork("https://optimism.blockpi.network/v1/rpc/public");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 10, "must be op");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
     }
 }
 
@@ -97,7 +97,9 @@ contract UniV3QuoteTest is Test {
     function test_eth() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18182443);
         query = new QueryData();
-        bytes memory tickInfo = QueryData(0xcAB450888f7F25762EB0710f40B67fF76767aB86).queryUniv3TicksSuperCompact(0x694D149DF9B0d82C92940aD3b8fa10722114ca71, 100);
+        bytes memory tickInfo = QueryData(0xcAB450888f7F25762EB0710f40B67fF76767aB86).queryUniv3TicksSuperCompact(
+            0x694D149DF9B0d82C92940aD3b8fa10722114ca71, 100
+        );
         uint256 len;
         uint256 offset;
 
@@ -327,18 +329,19 @@ contract UniV3QuoteTest is Test {
 // }
 
 contract AlgebraQuoteTest is Test {
-    IAlgebraPool WETH_USDC = IAlgebraPool(0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f);
+    address WETH_USDC = 0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f;
+    address WETH_QQ = 0xdAD783421C225e2202afCd236772433F01b57ea4;
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.ankr.com/arbitrum", 128741350);
+        vm.createSelectFork("https://rpc.ankr.com/arbitrum");
         query = new QueryData();
     }
 
     function test_query() public {
         // vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
         // query = new QueryData();
-        bytes memory tickInfo = query.queryAlgebraTicksSuperCompact2(address(WETH_USDC), 100);
+        bytes memory tickInfo = query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
         // query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
         // query.queryAlgebraTicksPoolCompact(address(WETH_USDC),887273, 100, false);
         uint256 len;
@@ -357,6 +360,30 @@ contract AlgebraQuoteTest is Test {
             }
             console2.log("tick: %d", int128(res >> 128));
             console2.log("l: %d", int128(res));
+        }
+    }
+
+    function test_compare() public {
+        address pool = WETH_USDC;
+
+        int24 leftMost = -887272 / int24(256) - 2;
+        int24 rightMost = 887272 / int24(256) + 1;
+        while (leftMost < rightMost) {
+            uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(leftMost));
+            if (res > 0) {
+                for (uint256 i = 0; i < 256; i++) {
+                    uint256 isInit = res & 0x01;
+                    if (isInit > 0) {
+                        int24 tick = int24(int256((256 * leftMost + int256(i)) * 1));
+                        IAlgebraPoolV1_9(pool).ticks(tick);
+                        console2.log(tick);
+
+                    }
+
+                    res = res >> 1;
+                }
+            }
+            leftMost++;
         }
     }
 
