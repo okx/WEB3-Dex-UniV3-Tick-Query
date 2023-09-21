@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "forge-std/console2.sol";
-
 /// @title Pool state that never changes
 /// @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values
 
@@ -563,7 +561,7 @@ contract QueryData {
      * 6.3 然后根据index 和 left, 重新利用公式 (index + 256 * left) * tickSpacing = tick 算出tick
      * 6.4 根据算出的tick拿到对应的delta L和 limitOrder的数据
      * 6.5 循环的开始条件即为 i = initPoint - 1, 循环次数为: initPoint次, 即循环条件为 i >= 0, 方向为 i--
-     * 
+     *
      * 问题是:
      * initPoint = 0时, 方向从大到小应该怎么处理? 此时应该进入下一个循环.
      */
@@ -593,9 +591,6 @@ contract QueryData {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
         tmp.initPoint2 = tmp.initPoint;
-        console2.log(tmp.currTick);
-        console2.log(tmp.tickSpacing);
-        console2.log(tmp.initPoint);
 
         if (tmp.currTick < 0) tmp.right--;
 
@@ -625,8 +620,6 @@ contract QueryData {
                                     );
                                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
-                                console2.log(tick);
-
                                 index++;
                             }
                         }
@@ -648,7 +641,6 @@ contract QueryData {
             tmp.initPoint = 0;
             tmp.right++;
         }
-        console2.log("==============");
         bool isInitPoint = true;
         while (index < len && tmp.left > tmp.leftMost) {
             uint256 res = IZumiPool(pool).pointBitmap(int16(tmp.left));
@@ -669,8 +661,6 @@ contract QueryData {
                                             & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
                                     );
                                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-
-                                console2.log(tick);
 
                                 index++;
                             }
