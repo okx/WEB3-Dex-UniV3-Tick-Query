@@ -50,7 +50,26 @@ module.exports = {
       zksync: true,
       verifyURL: 'https://zksync2-mainnet-explorer.zksync.io/contract_verification'
     },
+    mantle: {
+      url: 'https://rpc.mantle.xyz',
+      accounts: [process.env.PRIVATE_KEY]
+    },
 
+  },
+  etherscan: {
+    apiKey: {
+      mantle: "mantle", // apiKey is not required, just set a placeholder
+    },
+    customChains: [
+      {
+        network: "mantle",
+        chainId: 5000,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/5000/etherscan",
+          browserURL: "https://mantlescan.info"
+        }
+      }
+    ]
   },
   paths: {
     sources: './src/quote'

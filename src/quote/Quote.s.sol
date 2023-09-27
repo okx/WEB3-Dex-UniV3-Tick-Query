@@ -10,6 +10,7 @@ contract Deploy is Test {
 
     function run() public {
         require(deployer == 0x358506b4C5c441873AdE429c5A2BE777578E2C6f, "wrong deployer! change the private key");
+        // require(deployer == 0x399EfA78cAcD7784751CD9FBf2523eDf9EFDf6Ad, "wrong deployer! change the private key");
         // linea
         // vm.createSelectFork(vm.envString("LINEA_RPC_URL"));
         // vm.startBroadcast(deployer);
@@ -42,13 +43,13 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork("https://arb-mainnet-public.unifra.io");
-        vm.startBroadcast(deployer);
-        require(block.chainid == 42161, "must be arbi");
-        query = new QueryData();
-        console2.log("query address", address(query));
-        vm.stopBroadcast();
-        // vm.createSelectFork("https://base.meowrpc.com");
+        // vm.createSelectFork("https://arb-mainnet-public.unifra.io");
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 42161, "must be arbi");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        // vm.createSelectFork("https://rpc.notadegen.com/base");
         // vm.startBroadcast(deployer);
         // require(block.chainid == 8453, "must be base");
         // query = new QueryData();
@@ -377,7 +378,6 @@ contract AlgebraQuoteTest is Test {
                         int24 tick = int24(int256((256 * leftMost + int256(i)) * 1));
                         IAlgebraPoolV1_9(pool).ticks(tick);
                         console2.log(tick);
-
                     }
 
                     res = res >> 1;
