@@ -56,7 +56,7 @@ contract Deploy is Test {
         // query = new MavrickQuoter();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork("https://binance.llamarpc.com");
+        vm.createSelectFork("https://rpc.ankr.com/bsc");
         vm.startBroadcast(deployer);
         require(block.chainid == 56, "must be bsc");
         query = new MavrickQuoter();
@@ -73,10 +73,10 @@ contract Deploy is Test {
 
 contract MavQuoterTest is Test {
     function test_2() public {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"));
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18269137);
         address pool = 0x2Df64ac2e8874C43021675eD7a65d3429E30b96B;
         MavrickQuoter quoter = new MavrickQuoter();
-        quoter.queryMavTicksSuperCompact(pool, 100);
+        quoter.queryMavTicksSuperCompactRes(pool, 20);
     }
 
     function _test_compare() public {

@@ -1,5 +1,7 @@
 pragma solidity 0.8.17;
 
+import "./Math.sol";
+
 interface IMaverick {
     struct BinInfo {
         uint128 id;
@@ -71,7 +73,6 @@ contract MavrickQuoter {
 
     function queryMavTicksSuperCompact(address pool, uint256 len) public view returns (bytes memory) {
         SuperVar memory tmp;
-        tmp.tickSpacing = int24(int256(IMaverick(pool).tickSpacing()));
         {
             (, bytes memory slot0) = pool.staticcall(abi.encodeWithSignature("getState()"));
             int24 currTick;
@@ -170,4 +171,59 @@ contract MavrickQuoter {
         }
         return tickInfo;
     }
+
+    int24 constant DUMMY_TICK = 887272 + 1;
+
+    function queryMavTicksSuperCompactRes(address pool, uint256 len) public view returns (bytes memory) {
+        bytes memory tickInfo = queryMavTicksSuperCompact(pool, len);
+        bytes memory resInfo;
+        uint256 tickSpacing = IMaverick(pool).tickSpacing();
+        uint256 l;
+        uint256 offset;
+        assembly {
+            l := div(mload(tickInfo), 32)
+            offset := add(tickInfo, 32)
+        }
+        int24 prevTick = DUMMY_TICK;
+        uint112 reserveASum;
+        uint112 reserveBSum;
+        for (uint256 i = 0; i < l + 1; i++) {
+            int24 tick;
+            int8 kind;
+            uint112 reserveA;
+            uint112 reserveB;
+            assembly {
+                let data := mload(offset)
+                offset := add(offset, 32)
+                tick := and(0xffffff, shr(232, data))
+                kind := and(0xff, shr(224, data))
+                reserveA := and(0xffffffffffffffffffffffffffff, shr(112, data))
+                reserveB := and(0xffffffffffffffffffffffffffff, data)
+            }
+            if ((tick != prevTick && prevTick != DUMMY_TICK) || i == l) {
+                uint256 Liquidity = calculate(int32(prevTick), tickSpacing, reserveASum, reserveBSum);
+                int256 data = int256(uint256(int256(prevTick)) << 128)
+                    + (int256(Liquidity) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                resInfo = bytes.concat(resInfo, bytes32(uint256(data)));
+                reserveASum = 0;
+                reserveBSum = 0;
+            }
+            prevTick = tick;
+
+            reserveASum += reserveA;
+            reserveBSum += reserveB;
+        }
+        return resInfo;
+    }
+
+    function calculate(int32 tick, uint256 tickSpacing, uint112 reserveASum, uint112 reserveBSum)
+        internal
+        pure
+        returns (uint256 liquidity)
+    {
+        return Math.getTickL(
+            reserveASum, reserveBSum, Math.tickSqrtPrice(tickSpacing, tick), Math.tickSqrtPrice(tickSpacing, tick + 1)
+        );
+    }
+
 }
