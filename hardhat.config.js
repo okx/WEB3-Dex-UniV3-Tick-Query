@@ -72,7 +72,7 @@ module.exports = {
     ]
   },
   paths: {
-    sources: './src/quote'
+    sources: './src/mavrick'
   },
   abiExporter: {
     path: './abi',

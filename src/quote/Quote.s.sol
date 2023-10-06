@@ -427,17 +427,41 @@ contract IZumiQuoteTest is Test {
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://binance.nodereal.io", 31903446);
+        // vm.createSelectFork("https://binance.nodereal.io", 31903446);
         query = new QueryData();
     }
 
     // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
-
-    function test_2() public {
+    function test_3() public {
+        bytes memory data = hex"fffbc1480000000000000000000000000000000000000000000000000091dfb3fffbbfb800000000000000000000000000000000000000000000000000989680fffbba4000000000000000000000000000000000000000000000000000989680fffbb40000000000000000000000000000000000000000000000000000989680fffbacf800000000000000000000000000000000000000000000000000989680fffba46000000000000000000000000000000000000000000000000000989680fffb9d58000000000000000000000000000000000000000000000000004c4b40fffb997000000000000000000000000000000000000000000000000000989680fffb890800000000000000000000000000000000000000000000000000989680fffb6e78000000000000000000000000000000000000000000000000001e8480fffb6db00000000000000000000000000000000000000000000000000098967f";
+        uint256 len;
+        uint256 offset;
+        assembly {
+            len := div(mload(data),32)
+            offset := add(data, 32)
+        }
+        for (uint256 i = 0; i < len; i++) {
+            int256 res;
+            int32 tick;
+            uint112 sellingX;
+            uint112 sellingY;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+                tick := and(0xffffffff, shr(224, res))
+                sellingX := and(0xffffffffffffffffffffffffffff, shr(112, res))
+                sellingY := and(0xffffffffffffffffffffffffffff, res)
+            }
+            console2.log("tick: %d", tick);
+            console2.log("sellingX: %d", sellingX);
+            console2.log("sellingY: %d", sellingY);
+        }
+    }
+    function _test_2() public {
         query.queryIzumiSuperCompact(WBNB_USDT, 200);
     }
 
-    function test_compare() public {
+    function _test_compare() public {
         address pool = WBNB_USDT;
         int24 tickSpacing = IZumiPool(pool).pointDelta();
 
