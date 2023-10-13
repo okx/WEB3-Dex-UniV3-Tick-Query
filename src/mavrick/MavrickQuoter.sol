@@ -225,5 +225,4 @@ contract MavrickQuoter {
             reserveASum, reserveBSum, Math.tickSqrtPrice(tickSpacing, tick), Math.tickSqrtPrice(tickSpacing, tick + 1)
         );
     }
-
 }
