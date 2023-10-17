@@ -119,10 +119,17 @@ contract Swapper {
     }
 
     function swapX2Y() public {
-        pool.swapX2Y(address(this), 0.1 ether,int24(-887272)/40*40, "");
+        pool.swapX2Y(address(this), 0.1 ether, int24(-887272) / 40 * 40, "");
+    }
+
+    function swapY2X() public {
+        pool.swapY2X(address(this), 100e6, int24(887272) / 40 * 40, "");
     }
 
     function swapY2XCallback(uint256 x, uint256 y, bytes calldata data) external {
+        console2.log("=========SWAP RES=========");
+        console2.log(x);
+        console2.log(y);
         _swap(x, y, false);
     }
 
@@ -199,28 +206,49 @@ contract IzumiTest is Test {
             order.addLimitOrderY(tickA, sellingY);
             order.addLimitOrderX(tickA, sellingX);
         }
-        
+
         //  (, int128 liquidityNet,,,) = pool.points(int24(-262480));
         // console2.log(int256(liquidityNet));
-        (uint160 sqrtP, int24 currT,,,,,uint128 liquidity, uint128 liquidityX) = pool.state();
+        (uint160 sqrtP, int24 currT,,,,, uint128 liquidity, uint128 liquidityX) = pool.state();
         console2.log(sqrtP);
         console2.log(currT);
         console2.log(liquidity);
         console2.log(liquidityX);
-        State memory s = State(uint160(3099046684502399095391332), int24(-202990), uint16(0), 1, 1, false, uint128(291533420), uint128(56287763));
+        State memory s = State(
+            uint160(3099046684502399095391332),
+            int24(-202990),
+            uint16(0),
+            1,
+            1,
+            false,
+            uint128(291533420),
+            uint128(56287763)
+        );
         pool.setState(s);
-        swapper.swapX2Y();
+        // swapper.swapX2Y();
+        swapper.swapY2X();
         console2.log(tokenB.balanceOf(address(swapper)));
     }
 
-    function test_compare() public {
+    function _test_compare() public {
         vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 140182989);
         address WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
         deal(WETH, address(this), 1 ether);
 
         // IZumi pool = IZumi(0x9C1630da3d6c9d5eF977500478E330b0a56B2f23);
         iZiSwapPool pool = iZiSwapPool(0x6336e3F52d196b4f63eE512455237c934B3355eB);
-        pool.swapX2Y(address(this), 0.1 ether,int24(-887272)/40*40, "");
+        pool.swapX2Y(address(this), 0.1 ether, int24(-887272) / 40 * 40, "");
+        console2.log(IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8).balanceOf(address(this)));
+    }
+
+    function test_compare2() public {
+        vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 140182989);
+        address USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+        deal(USDC, address(this), 100e6);
+
+        // IZumi pool = IZumi(0x9C1630da3d6c9d5eF977500478E330b0a56B2f23);
+        iZiSwapPool pool = iZiSwapPool(0x6336e3F52d196b4f63eE512455237c934B3355eB);
+        pool.swapY2X(address(this), 100e6, int24(887272) / 40 * 40, "");
         console2.log(IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8).balanceOf(address(this)));
     }
 
@@ -231,6 +259,14 @@ contract IzumiTest is Test {
         address WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
         IERC20(WETH).transfer(msg.sender, x);
     }
+    function swapY2XCallback(uint256 x, uint256 y, bytes calldata data) external {
+        console2.log("=========SWAP RES=========");
+        console2.log(x);
+        console2.log(y);
+        address USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+        IERC20(USDC).transfer(msg.sender, y);
+    }
+    
 
     function _test_preset() public {
         // vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 126909242);
