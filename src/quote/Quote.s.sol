@@ -9,8 +9,8 @@ contract Deploy is Test {
     address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
 
     function run() public {
-        require(deployer == 0x358506b4C5c441873AdE429c5A2BE777578E2C6f, "wrong deployer! change the private key");
-        // require(deployer == 0x399EfA78cAcD7784751CD9FBf2523eDf9EFDf6Ad, "wrong deployer! change the private key");
+        // require(deployer == 0x358506b4C5c441873AdE429c5A2BE777578E2C6f, "wrong deployer! change the private key");
+        require(deployer == 0x399EfA78cAcD7784751CD9FBf2523eDf9EFDf6Ad, "wrong deployer! change the private key");
         // linea
         // vm.createSelectFork(vm.envString("LINEA_RPC_URL"));
         // vm.startBroadcast(deployer);
@@ -67,6 +67,12 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
+        vm.createSelectFork(vm.envString("SCROLL_RPC_URL"));
+        vm.startBroadcast(deployer);
+        require(block.chainid == 534352, "must be scroll");
+        query = new QueryData();
+        console2.log("query address", address(query));
+        vm.stopBroadcast();
     }
 }
 
