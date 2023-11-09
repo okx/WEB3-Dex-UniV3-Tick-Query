@@ -21,6 +21,7 @@ contract IZumiCheck is Test {
 
     modifier fork(ForkInfo memory _info) {
         vm.createSelectFork(vm.envString(_info.chain), _info.blockNumber);
+        _;
     }
 
     struct TestInfo {
