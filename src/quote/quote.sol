@@ -354,8 +354,13 @@ contract QueryData {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.right + int256(i)) * tmp.tickSpacing);
-                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
-
+                        // (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+                        // fix-bug: to make consistent with solidlyV3 and ramsesV2
+                        int128 liquidityNet;
+                        (,bytes memory d) = pool.staticcall(abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick))));
+                        assembly {
+                            liquidityNet := mload(add(d, 64))
+                        }
                         int256 data = int256(uint256(int256(tick)) << 128)
                             + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
@@ -378,8 +383,13 @@ contract QueryData {
                     uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
                     if (isInit > 0) {
                         int256 tick = int256((256 * tmp.left + int256(i)) * tmp.tickSpacing);
-                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
-
+                        // (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+                        // fix-bug: to make consistent with solidlyV3 and ramsesV2
+                        int128 liquidityNet;
+                        (,bytes memory d) = pool.staticcall(abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick))));
+                        assembly {
+                            liquidityNet := mload(add(d, 64))
+                        }
                         int256 data = int256(uint256(int256(tick)) << 128)
                             + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));

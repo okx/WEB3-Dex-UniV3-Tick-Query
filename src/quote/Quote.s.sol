@@ -67,12 +67,24 @@ contract Deploy is Test {
         // query = new QueryData();
         // console2.log("query address", address(query));
         // vm.stopBroadcast();
-        vm.createSelectFork(vm.envString("SCROLL_RPC_URL"));
+        // vm.createSelectFork(vm.envString("SCROLL_RPC_URL"));
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 534352, "must be scroll");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
+        vm.createSelectFork(vm.envString("FTM_RPC_URL"));
         vm.startBroadcast(deployer);
-        require(block.chainid == 534352, "must be scroll");
+        require(block.chainid == 250, "must be FTM");
         query = new QueryData();
         console2.log("query address", address(query));
         vm.stopBroadcast();
+        // vm.createSelectFork(vm.envString("SCROLL_RPC_URL"));
+        // vm.startBroadcast(deployer);
+        // require(block.chainid == 534352, "must be scroll");
+        // query = new QueryData();
+        // console2.log("query address", address(query));
+        // vm.stopBroadcast();
     }
 }
 

@@ -8,3 +8,4 @@ forge-std/=lib/forge-std/src/
 @izumi/contracts/=lib/iZiSwap-core/contracts/
 solmate/=lib/solmate/src/
 @UniswapV3/core/contracts/=lib/v3-core/contracts/
+@solidly/contracts/=lib/solidly/SolidlyV3Factory/contracts/

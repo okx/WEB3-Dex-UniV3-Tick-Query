@@ -259,6 +259,7 @@ contract IzumiTest is Test {
         address WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
         IERC20(WETH).transfer(msg.sender, x);
     }
+
     function swapY2XCallback(uint256 x, uint256 y, bytes calldata data) external {
         console2.log("=========SWAP RES=========");
         console2.log(x);
@@ -266,7 +267,6 @@ contract IzumiTest is Test {
         address USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
         IERC20(USDC).transfer(msg.sender, y);
     }
-    
 
     function _test_preset() public {
         // vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 126909242);
