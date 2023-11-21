@@ -357,7 +357,9 @@ contract QueryData {
                         // (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
                         // fix-bug: to make consistent with solidlyV3 and ramsesV2
                         int128 liquidityNet;
-                        (,bytes memory d) = pool.staticcall(abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick))));
+                        (, bytes memory d) = pool.staticcall(
+                            abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick)))
+                        );
                         assembly {
                             liquidityNet := mload(add(d, 64))
                         }
@@ -386,7 +388,9 @@ contract QueryData {
                         // (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
                         // fix-bug: to make consistent with solidlyV3 and ramsesV2
                         int128 liquidityNet;
-                        (,bytes memory d) = pool.staticcall(abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick))));
+                        (, bytes memory d) = pool.staticcall(
+                            abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick)))
+                        );
                         assembly {
                             liquidityNet := mload(add(d, 64))
                         }

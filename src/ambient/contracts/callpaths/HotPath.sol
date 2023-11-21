@@ -2,15 +2,15 @@
 
 pragma solidity 0.8.19;
 
-import '../libraries/Directives.sol';
-import '../libraries/Encoding.sol';
-import '../libraries/TokenFlow.sol';
-import '../libraries/PriceGrid.sol';
-import '../mixins/MarketSequencer.sol';
-import '../mixins/SettleLayer.sol';
-import '../mixins/PoolRegistry.sol';
-import '../mixins/MarketSequencer.sol';
-import '../mixins/ProtocolAccount.sol';
+import "../libraries/Directives.sol";
+import "../libraries/Encoding.sol";
+import "../libraries/TokenFlow.sol";
+import "../libraries/PriceGrid.sol";
+import "../mixins/MarketSequencer.sol";
+import "../mixins/SettleLayer.sol";
+import "../mixins/PoolRegistry.sol";
+import "../mixins/MarketSequencer.sol";
+import "../mixins/ProtocolAccount.sol";
 
 /* @title Hot path mixin.
  * @notice Provides the top-level function for the most common operation: simple one-hop
@@ -29,21 +29,25 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
     using CurveMath for CurveMath.CurveState;
     using Chaining for Chaining.PairFlow;
 
-
     /* @notice Executes a swap on an arbitrary pool. */
-    function swapExecute (address base, address quote,
-                          uint256 poolIdx, bool isBuy, bool inBaseQty, uint128 qty,
-                          uint16 poolTip, uint128 limitPrice, uint128 minOutput,
-                          uint8 reserveFlags) internal
-        returns (int128 baseFlow, int128 quoteFlow) {
-        
-        PoolSpecs.PoolCursor memory pool = preparePoolCntx
-            (base, quote, poolIdx, poolTip, isBuy, inBaseQty, qty);
+    function swapExecute(
+        address base,
+        address quote,
+        uint256 poolIdx,
+        bool isBuy,
+        bool inBaseQty,
+        uint128 qty,
+        uint16 poolTip,
+        uint128 limitPrice,
+        uint128 minOutput,
+        uint8 reserveFlags
+    ) internal returns (int128 baseFlow, int128 quoteFlow) {
+        PoolSpecs.PoolCursor memory pool = preparePoolCntx(base, quote, poolIdx, poolTip, isBuy, inBaseQty, qty);
 
         Chaining.PairFlow memory flow = swapDir(pool, isBuy, inBaseQty, qty, limitPrice);
         (baseFlow, quoteFlow) = (flow.baseFlow_, flow.quoteFlow_);
 
-        pivotOutFlow(flow, minOutput, isBuy, inBaseQty);        
+        pivotOutFlow(flow, minOutput, isBuy, inBaseQty);
         settleFlows(base, quote, flow.baseFlow_, flow.quoteFlow_, reserveFlags);
         accumProtocolFees(flow, base, quote);
     }
@@ -58,9 +62,11 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
      *               quote tokens
      * @param inBaseQty If true indicates the base-side was the fixed leg of the swap.
      * @return outFlow Returns the non-fixed side of the swap flow. */
-    function pivotOutFlow (Chaining.PairFlow memory flow, uint128 minOutput,
-                           bool isBuy, bool inBaseQty) private pure
-        returns (int128 outFlow) {
+    function pivotOutFlow(Chaining.PairFlow memory flow, uint128 minOutput, bool isBuy, bool inBaseQty)
+        private
+        pure
+        returns (int128 outFlow)
+    {
         outFlow = inBaseQty ? flow.quoteFlow_ : flow.baseFlow_;
         bool isOutPaid = (isBuy == inBaseQty);
         int128 thresh = isOutPaid ? -int128(minOutput) : int128(minOutput);
@@ -69,9 +75,10 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
 
     /* @notice Wrapper call to setup the swap directive object and call the swap logic in
      *         the MarketSequencer mixin. */
-    function swapDir (PoolSpecs.PoolCursor memory pool, bool isBuy,
-                      bool inBaseQty, uint128 qty, uint128 limitPrice) private
-        returns (Chaining.PairFlow memory) {
+    function swapDir(PoolSpecs.PoolCursor memory pool, bool isBuy, bool inBaseQty, uint128 qty, uint128 limitPrice)
+        private
+        returns (Chaining.PairFlow memory)
+    {
         Directives.SwapDirective memory dir;
         dir.isBuy_ = isBuy;
         dir.inBaseQty_ = inBaseQty;
@@ -79,16 +86,20 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
         dir.limitPrice_ = limitPrice;
         dir.rollType_ = 0;
         return swapOverPool(dir, pool);
-        
     }
 
     /* @notice Given a pair and pool type index queries and returns the current specs for
      *         that pool. And if permissioned pool, checks against the permit oracle, 
      *         adjusting fee if necessary. */
-    function preparePoolCntx (address base, address quote,
-                              uint256 poolIdx, uint16 poolTip,
-                              bool isBuy, bool inBaseQty, uint128 qty) private
-        returns (PoolSpecs.PoolCursor memory) {
+    function preparePoolCntx(
+        address base,
+        address quote,
+        uint256 poolIdx,
+        uint16 poolTip,
+        bool isBuy,
+        bool inBaseQty,
+        uint128 qty
+    ) private returns (PoolSpecs.PoolCursor memory) {
         PoolSpecs.PoolCursor memory pool = queryPool(base, quote, poolIdx);
         if (poolTip > pool.head_.feeRate_) {
             pool.head_.feeRate_ = poolTip;
@@ -99,16 +110,21 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
 
     /* @notice Syntatic sugar that wraps a swapExecute call with an ABI encoded version of
      *         the arguments. */
-    function swapEncoded (bytes calldata input) internal returns
-        (int128 baseFlow, int128 quoteFlow) {
-        (address base, address quote,
-         uint256 poolIdx, bool isBuy, bool inBaseQty, uint128 qty, uint16 poolTip,
-         uint128 limitPrice, uint128 minOutput, uint8 reserveFlags) =
-            abi.decode(input, (address, address, uint256, bool, bool,
-                               uint128, uint16, uint128, uint128, uint8));
-        
-        return swapExecute(base, quote, poolIdx, isBuy, inBaseQty, qty, poolTip,
-                           limitPrice, minOutput, reserveFlags);
+    function swapEncoded(bytes calldata input) internal returns (int128 baseFlow, int128 quoteFlow) {
+        (
+            address base,
+            address quote,
+            uint256 poolIdx,
+            bool isBuy,
+            bool inBaseQty,
+            uint128 qty,
+            uint16 poolTip,
+            uint128 limitPrice,
+            uint128 minOutput,
+            uint8 reserveFlags
+        ) = abi.decode(input, (address, address, uint256, bool, bool, uint128, uint16, uint128, uint128, uint8));
+
+        return swapExecute(base, quote, poolIdx, isBuy, inBaseQty, qty, poolTip, limitPrice, minOutput, reserveFlags);
     }
 }
 
@@ -116,19 +132,14 @@ contract HotPath is MarketSequencer, SettleLayer, ProtocolAccount {
  * @notice The version of the HotPath in a standalone sidecar proxy contract. If used
  *         this contract would be attached to hotProxy_ in the main dex contract. */
 contract HotProxy is HotPath {
-
-    function userCmd (bytes calldata input) public payable
-        returns (int128, int128) {
+    function userCmd(bytes calldata input) public payable returns (int128, int128) {
         require(!hotPathOpen_, "Hot path enabled");
         return swapEncoded(input);
     }
 
     /* @notice Used at upgrade time to verify that the contract is a valid Croc sidecar proxy and used
      *         in the correct slot. */
-    function acceptCrocProxyRole (address, uint16 slot) public pure returns (bool) {
+    function acceptCrocProxyRole(address, uint16 slot) public pure returns (bool) {
         return slot == CrocSlots.SWAP_PROXY_IDX;
     }
-
 }
-
-

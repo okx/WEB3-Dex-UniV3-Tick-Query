@@ -41,7 +41,5 @@ contract IZumiCheck is Test {
         testInfo.poolAddr = 0xb694b93796f60dD1eA1B27B5D8aC3945Ddd6ef06;
         testInfo.liquidity = 161170657147;
         testInfo.tick0 = 200891;
-    
     }
-
 }
