@@ -1,0 +1,372 @@
+pragma solidity 0.8.19;
+
+import "./contracts/CrocSwapDex.sol";
+import "./contracts/lens/CrocImpact.sol";
+import "forge-std/console2.sol";
+import "forge-std/test.sol";
+
+library CrocSlots {
+    // Slot location of storage slots and/or hash map storage slot offsets. Values below
+    // can be used to directly read state in CrocSwapDex by other contracts.
+    uint256 public constant AUTHORITY_SLOT = 0;
+    uint256 public constant LVL_MAP_SLOT = 65538;
+    uint256 public constant KO_PIVOT_SLOT = 65539;
+    uint256 public constant KO_MERKLE_SLOT = 65540;
+    uint256 public constant KO_POS_SLOT = 65541;
+    uint256 public constant POOL_TEMPL_SLOT = 65544;
+    uint256 public constant POOL_PARAM_SLOT = 65545;
+    uint256 public constant FEE_MAP_SLOT = 65548;
+    uint256 public constant POS_MAP_SLOT = 65549;
+    uint256 public constant AMB_MAP_SLOT = 65550;
+    uint256 public constant CURVE_MAP_SLOT = 65551;
+    uint256 public constant BAL_MAP_SLOT = 65552;
+
+    // The slots of the currently attached sidecar proxy contracts. These are set by
+    // covention and should be expanded over time as more sidecars are installed. For
+    // backwards compatibility, upgraders should never break existing interface on
+    // a pre-existing proxy sidecar.
+    uint16 constant BOOT_PROXY_IDX = 0;
+    uint16 constant SWAP_PROXY_IDX = 1;
+    uint16 constant LP_PROXY_IDX = 2;
+    uint16 constant COLD_PROXY_IDX = 3;
+    uint16 constant LONG_PROXY_IDX = 4;
+    uint16 constant MICRO_PROXY_IDX = 5;
+    uint16 constant MULTICALL_PROXY_IDX = 6;
+    uint16 constant KNOCKOUT_LP_PROXY_IDX = 7;
+    uint16 constant FLAG_CROSS_PROXY_IDX = 3500;
+    uint16 constant SAFE_MODE_PROXY_PATH = 9999;
+}
+
+contract POC is Test {
+    CrocSwapDex dex = CrocSwapDex(payable(0xAaAaAAAaA24eEeb8d57D431224f73832bC34f688));
+    address USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    CrocImpact lens;
+
+    using CurveMath for CurveMath.CurveState;
+    using CurveRoll for CurveMath.CurveState;
+    using SwapCurve for CurveMath.CurveState;
+    using SafeCast for uint144;
+    using TickMath for uint128;
+    using LiquidityMath for uint128;
+    using Chaining for Chaining.PairFlow;
+    using Bitmaps for uint256;
+    using Bitmaps for int24;
+
+    struct QueryInfo {
+        PoolSpecs.PoolCursor cursor;
+        CurveMath.CurveState curve;
+        Directives.SwapDirective swap;
+        address base;
+        address quote;
+        uint256 poolIdx;
+        uint16 poolTip;
+        bool isBuy;
+        bool inBaseQty;
+        uint128 qty;
+        uint128 limitPrice;
+    }
+
+    QueryInfo info;
+
+    function setUp() public {
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18618563);
+        lens = new CrocImpact(address(dex));
+
+        info.base = DAI;
+        info.quote = USDC;
+        info.poolIdx = 420;
+        info.poolTip = 0;
+        info.isBuy = false;
+        info.inBaseQty = false;
+        info.qty = uint128(1 ether);
+        info.limitPrice = 0;
+
+        info.curve = lens.queryCurve(info.base, info.quote, info.poolIdx);
+        info.cursor = lens.queryPoolCntx(info.base, info.quote, info.poolIdx, info.poolTip);
+        info.swap.isBuy_ = info.isBuy;
+        info.swap.inBaseQty_ = info.inBaseQty;
+        info.swap.qty_ = info.qty;
+        info.swap.limitPrice_ = info.limitPrice;
+    }
+
+    function test_getTick() public {
+        lens.calcImpact(
+            info.base, info.quote, info.poolIdx, info.isBuy, info.inBaseQty, info.qty, info.poolTip, info.limitPrice
+        );
+    }
+
+    function test_scan() public {
+        
+    }
+
+    struct SuperVar {
+        int24 currTick;
+        int24 right;
+        int24 left;
+        int24 leftMost;
+        int24 rightMost;
+        uint256 initPoint;
+        uint256 initPoint2;
+        bytes32 poolHash;
+        bool isUpper;
+        uint8 lobbyBit;
+    }
+
+    function _getCurrTick(bytes32 poolHash) internal view returns (int24) {
+        bytes32 slot = keccak256(abi.encode(key, CrocSlots.CURVE_MAP_SLOT));
+        uint256 valOne = CrocSwapDex(dex).readSlot(uint256(slot));
+        uint128 priceRoot_ = uint128((valOne << 128) >> 128);
+        return getTickAtSqrtRatio(priceRoot_);
+    }
+    function _getPinBitmapL0(SuperVar memory tmp) internal view returns (uint256) {
+        
+    }
+    function _getPinBitmapL1(SuperVar memory tmp) internal view returns (uint256) {
+
+    }
+    function _getPinBitmapL2(SuperVar memory tmp) internal view returns (uint256) {
+
+    }
+
+
+    // function queryAmbientTicksSuperCompact(address base, address quote, uint256 len)
+    //     public
+    //     view
+    //     returns (bytes memory)
+    // {
+    //     SuperVar memory tmp;
+    //     // fix-bug: pancake pool's slot returns different types of params than uniV3, which will cause problem
+    //     (base, quote) = base < quote ? (base, quote) : (quote, base);
+    //     tmp.poolHash = keccak256(abi.encode(base, quote, 420));
+    //     tmp.currTick = _getCurrTick(tmp.poolHash);
+
+    //     tmp.right = tmp.currTick / int24(256);
+    //     tmp.leftMost = -887272 / int24(256) - 2;
+    //     tmp.rightMost = 887272 / int24(256) + 1;
+
+    //     if (tmp.currTick < 0) {
+    //         tmp.initPoint = uint256(int256(tmp.currTick) - (int256(tmp.currTick) / 256 - 1) * 256) % 256;
+    //     } else {
+    //         tmp.initPoint = uint256(int256(tmp.currTick)) % 256;
+    //     }
+    //     tmp.initPoint2 = tmp.initPoint;
+
+    //     if (tmp.currTick < 0) tmp.right--;
+
+    //     bytes memory tickInfo;
+
+    //     tmp.left = tmp.right;
+
+    //     uint256 index = 0;
+
+    //     while (index < len / 2 && tmp.right < tmp.rightMost) {
+    //         uint256 res = _getPinBitmapL2(tmp);
+    //         if (res > 0) {
+    //             res = res >> tmp.initPoint;
+    //             for (uint256 i = tmp.initPoint; i < 256 && index < len / 2; i++) {
+    //                 uint256 isInit = res & 0x01;
+    //                 if (isInit > 0) {
+    //                     int256 tick = int256((256 * tmp.right + int256(i)) * tmp.tickSpacing);
+
+    //                     int128 liquidityNet = _getLiquidityByTick(tmp, tick);
+
+    //                     int256 data = int256(uint256(int256(tick)) << 128)
+    //                         + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+    //                     tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+    //                     index++;
+    //                 }
+
+    //                 res = res >> 1;
+    //             }
+    //         }
+
+    //         tmp.initPoint = 0;
+    //         tmp.right++;
+    //     }
+    //     bool isInitPoint = true;
+    //     while (index < len && tmp.left > tmp.leftMost) {
+    //         uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(tmp.left));
+    //         if (res > 0 && tmp.initPoint2 != 0) {
+    //             res = isInitPoint ? res << ((256 - tmp.initPoint2) % 256) : res;
+    //             for (uint256 i = tmp.initPoint2 - 1; i >= 0 && index < len; i--) {
+    //                 uint256 isInit = res & 0x8000000000000000000000000000000000000000000000000000000000000000;
+    //                 if (isInit > 0) {
+    //                     int256 tick = int256((256 * tmp.left + int256(i)) * tmp.tickSpacing);
+    //                     // (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+    //                     // fix-bug: to make consistent with solidlyV3 and ramsesV2
+    //                     int128 liquidityNet;
+    //                     (, bytes memory d) = pool.staticcall(
+    //                         abi.encodeWithSelector(IUniswapV3PoolState.ticks.selector, int24(int256(tick)))
+    //                     );
+    //                     assembly {
+    //                         liquidityNet := mload(add(d, 64))
+    //                     }
+    //                     int256 data = int256(uint256(int256(tick)) << 128)
+    //                         + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+    //                     tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
+
+    //                     index++;
+    //                 }
+
+    //                 res = res << 1;
+    //                 if (i == 0) break;
+    //             }
+    //         }
+    //         isInitPoint = false;
+    //         tmp.initPoint2 = 256;
+
+    //         tmp.left--;
+    //     }
+    //     return tickInfo;
+    // }
+
+    function getTickAtSqrtRatio(uint128 sqrtPriceX64) internal pure returns (int24 tick) {
+        // Set to unchecked, but the original UniV3 library was written in a pre-checked version of Solidity
+        unchecked {
+            // second inequality must be < because the price can never reach the price at the max tick
+            require(sqrtPriceX64 >= MIN_SQRT_RATIO && sqrtPriceX64 < MAX_SQRT_RATIO);
+            uint256 ratio = uint256(sqrtPriceX64) << 64;
+
+            uint256 r = ratio;
+            uint256 msb = 0;
+
+            assembly {
+                let f := shl(7, gt(r, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(6, gt(r, 0xFFFFFFFFFFFFFFFF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(5, gt(r, 0xFFFFFFFF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(4, gt(r, 0xFFFF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(3, gt(r, 0xFF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(2, gt(r, 0xF))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := shl(1, gt(r, 0x3))
+                msb := or(msb, f)
+                r := shr(f, r)
+            }
+            assembly {
+                let f := gt(r, 0x1)
+                msb := or(msb, f)
+            }
+
+            if (msb >= 128) r = ratio >> (msb - 127);
+            else r = ratio << (127 - msb);
+
+            int256 log_2 = (int256(msb) - 128) << 64;
+
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(63, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(62, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(61, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(60, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(59, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(58, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(57, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(56, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(55, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(54, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(53, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(52, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(51, f))
+                r := shr(f, r)
+            }
+            assembly {
+                r := shr(127, mul(r, r))
+                let f := shr(128, r)
+                log_2 := or(log_2, shl(50, f))
+            }
+
+            int256 log_sqrt10001 = log_2 * 255738958999603826347141; // 128.128 number
+
+            int24 tickLow = int24((log_sqrt10001 - 3402992956809132418596140100660247210) >> 128);
+            int24 tickHi = int24((log_sqrt10001 + 291339464771989622907027621153398088495) >> 128);
+
+            tick = tickLow == tickHi ? tickLow : getSqrtRatioAtTick(tickHi) <= sqrtPriceX64 ? tickHi : tickLow;
+        }
+    }
+}

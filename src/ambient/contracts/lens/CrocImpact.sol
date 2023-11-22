@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import "../CrocSwapDex.sol";
+import "forge-std/console2.sol";
 
 /* @notice Stateless read only contract that calculates the price impact of a hypothetical
  *         swap on the current state of a given CrocSwapDex pool. Useful for calculating
@@ -73,7 +74,7 @@ contract CrocImpact {
 
     /* @notice Retrieves the pool context object. */
     function queryPoolCntx(address base, address quote, uint256 poolIdx, uint16 poolTip)
-        private
+        public
         view
         returns (PoolSpecs.PoolCursor memory cursor)
     {
@@ -94,7 +95,7 @@ contract CrocImpact {
 
     /* @notice Retrieves the liquidity curve state for the pool. */
     function queryCurve(address base, address quote, uint256 poolIdx)
-        private
+        public
         view
         returns (CurveMath.CurveState memory curve)
     {
@@ -111,27 +112,34 @@ contract CrocImpact {
     }
 
     /* @notice Retrieves the level liquidity state for the tick in the pool. */
-    function queryLevel(bytes32 poolHash, int24 tick) private view returns (uint96 bidLots, uint96 askLots) {
+    function queryLevel(bytes32 poolHash, int24 tick) public view returns (uint96 bidLots, uint96 askLots) {
         bytes32 key = keccak256(abi.encodePacked(poolHash, tick));
         bytes32 slot = keccak256(abi.encode(key, CrocSlots.LVL_MAP_SLOT));
         uint256 val = CrocSwapDex(dex_).readSlot(uint256(slot));
 
         askLots = uint96((val << 64) >> 160);
         bidLots = uint96((val << 160) >> 160);
+        console2.log("query level tick", int256(tick));
+
+        console2.log("query level val", val);
     }
 
     /* @notice Retrieves the terminus level bitmap at the location. */
-    function queryTerminus(bytes32 key) private view returns (uint256) {
+    function queryTerminus(bytes32 key) public view returns (uint256) {
         uint256 TERMINUS_SLOT = 65543;
         bytes32 slot = keccak256(abi.encode(key, TERMINUS_SLOT));
-        return CrocSwapDex(dex_).readSlot(uint256(slot));
+        uint256 res = CrocSwapDex(dex_).readSlot(uint256(slot));
+        console2.log("query Terminus", res);
+        return res;
     }
 
     /* @notice Retrieves the mezzanine level bitmap at the location. */
-    function queryMezz(bytes32 key) private view returns (uint256) {
+    function queryMezz(bytes32 key) public view returns (uint256) {
         uint256 MEZZ_SLOT = 65542;
         bytes32 slot = keccak256(abi.encode(key, MEZZ_SLOT));
-        return CrocSwapDex(dex_).readSlot(uint256(slot));
+        uint256 res = CrocSwapDex(dex_).readSlot(uint256(slot));
+        console2.log("query Mezz", res);
+        return res;
     }
 
     /* @notice Calculates the swap flow and applies the change to the liquidity curve
@@ -140,13 +148,14 @@ contract CrocImpact {
         PoolSpecs.PoolCursor memory pool,
         CurveMath.CurveState memory curve,
         Directives.SwapDirective memory swap
-    ) private view returns (int128 baseFlow, int128 quoteFlow) {
+    ) public view returns (int128 baseFlow, int128 quoteFlow) {
         if (swap.isBuy_ == (curve.priceRoot_ >= swap.limitPrice_)) {
             return (0, 0);
         }
 
         Chaining.PairFlow memory accum;
         int24 midTick = curve.priceRoot_.getTickAtSqrtRatio();
+        console2.log("slot0.currTick", int256(midTick));
 
         // Keep iteratively executing more quantity until we either reach our limit price
         // or have zero quantity left to execute.
@@ -198,13 +207,14 @@ contract CrocImpact {
 
     /* @notice Adjusts the liquidity when crossing over a concentrated liquidity bump at
      *         a given tick. */
+
     function adjTickLiq(
         Chaining.PairFlow memory accum,
         int24 bumpTick,
         CurveMath.CurveState memory curve,
         Directives.SwapDirective memory swap,
         bytes32 poolHash
-    ) private view returns (int24) {
+    ) public view returns (int24) {
         unchecked {
             if (!Bitmaps.isTickFinite(bumpTick)) return bumpTick;
 
@@ -226,29 +236,37 @@ contract CrocImpact {
 
     /* @notice Calculates the next tick to seek in the curve bump tick map. */
     function pinBitmap(bytes32 poolHash, bool isUpper, int24 startTick)
-        private
+        public
         view
         returns (int24 boundTick, bool isSpill)
     {
+        console2.log("startTick", int256(startTick));
+        console2.log("isUpper", isUpper);
         uint256 termBitmap = queryTerminus(encodeTerm(poolHash, startTick));
         uint16 shiftTerm = startTick.termBump(isUpper);
         int16 tickMezz = startTick.mezzKey();
+        console2.log("shiftTerm", uint256(shiftTerm));
+        console2.log("tickMezz", int256(tickMezz));
         (boundTick, isSpill) = pinTermMezz(isUpper, shiftTerm, tickMezz, termBitmap);
     }
 
     /* @notice Calculates the next mezznine tick to seek in the curve bump tick map. */
     function pinTermMezz(bool isUpper, uint16 shiftTerm, int16 tickMezz, uint256 termBitmap)
-        private
+        public
         pure
         returns (int24 nextTick, bool spillBit)
     {
         (uint8 nextTerm, bool spillTrunc) = termBitmap.bitAfterTrunc(shiftTerm, isUpper);
+        console2.log("nextTerm", uint256(nextTerm));
+        console2.log("spillTrunc", spillTrunc);
         spillBit = doesSpillBit(isUpper, spillTrunc, termBitmap);
+        console2.log("spillBit", spillBit);
         nextTick = spillBit ? spillOverPin(isUpper, tickMezz) : Bitmaps.weldMezzTerm(tickMezz, nextTerm);
+        console2.log("nextTick", nextTick);
     }
 
     /* @notice Moves to next tick when reaching the end of a terminus in bitmap */
-    function spillOverPin(bool isUpper, int16 tickMezz) private pure returns (int24) {
+    function spillOverPin(bool isUpper, int16 tickMezz) public pure returns (int24) {
         if (isUpper) {
             return tickMezz == Bitmaps.zeroMezz(isUpper)
                 ? Bitmaps.zeroTick(isUpper)
@@ -259,7 +277,7 @@ contract CrocImpact {
     }
 
     /* @notice Determines if the seek would spill over the outside of the bitmap terminus. */
-    function doesSpillBit(bool isUpper, bool spillTrunc, uint256 termBitmap) private pure returns (bool spillBit) {
+    function doesSpillBit(bool isUpper, bool spillTrunc, uint256 termBitmap) public pure returns (bool spillBit) {
         if (isUpper) {
             spillBit = spillTrunc;
         } else {
@@ -288,7 +306,7 @@ contract CrocImpact {
 
     /* @notice Seeks the next tick bitmap by searching in the adjacent neighborhood. */
     function seekAtTerm(bytes32 poolIdx, uint8 lobbyBit, uint8 mezzBit, bool isUpper)
-        private
+        public
         view
         returns (int24, bool)
     {
@@ -302,7 +320,7 @@ contract CrocImpact {
      *         neighborhood.
      * @dev This covers a span of 65 thousand ticks, so should capture most cases. */
     function seekAtMezz(bytes32 poolIdx, uint8 lobbyBit, uint8 mezzBorder, bool isUpper)
-        private
+        public
         view
         returns (int24, bool)
     {
@@ -315,7 +333,7 @@ contract CrocImpact {
 
     /* @notice Used when the tick is not contained in the mezzanine. We walk through the
      *         the mezzanine tick bitmaps one by one until we find an active tick bit. */
-    function seekOverLobby(bytes32 poolIdx, uint8 lobbyBit, bool isUpper) private view returns (int24) {
+    function seekOverLobby(bytes32 poolIdx, uint8 lobbyBit, bool isUpper) public view returns (int24) {
         return isUpper ? seekLobbyUp(poolIdx, lobbyBit) : seekLobbyDown(poolIdx, lobbyBit);
     }
 
@@ -323,7 +341,7 @@ contract CrocImpact {
      * layer. Instead we iterate through the top-level bits until we find an active
      * mezzanine. This requires a maximum of 256 iterations, and can be gas intensive.
      * However moves at this level represent 65,000% price changes and are very rare. */
-    function seekLobbyUp(bytes32 poolIdx, uint8 lobbyBit) private view returns (int24) {
+    function seekLobbyUp(bytes32 poolIdx, uint8 lobbyBit) public view returns (int24) {
         uint8 MAX_MEZZ = 0;
         unchecked {
             // Because it's unchecked idx will wrap around to 0 when it checks all bits
@@ -336,7 +354,7 @@ contract CrocImpact {
     }
 
     /* Same logic as seekLobbyUp(), but the inverse direction. */
-    function seekLobbyDown(bytes32 poolIdx, uint8 lobbyBit) private view returns (int24) {
+    function seekLobbyDown(bytes32 poolIdx, uint8 lobbyBit) public view returns (int24) {
         uint8 MIN_MEZZ = 255;
         unchecked {
             // Because it's unchecked idx will wrap around to 255 when it checks all bits
@@ -351,7 +369,7 @@ contract CrocImpact {
     /* @notice Splits out the lobby bits and the mezzanine bits from the 24-bit price
      *         tick index associated with the type of border tick used in seekMezzSpill()
      *         call */
-    function rootsForBorder(int24 borderTick, bool isUpper) private pure returns (uint8 lobbyBit, uint8 mezzBit) {
+    function rootsForBorder(int24 borderTick, bool isUpper) public pure returns (uint8 lobbyBit, uint8 mezzBit) {
         // Because pinTermMezz returns a border *on* the previous bitmap, we need to
         // decrement by one to get the seek starting point.
         int24 pinTick = isUpper ? borderTick : (borderTick - 1);
@@ -360,39 +378,39 @@ contract CrocImpact {
     }
 
     /* @notice Encodes the hash key for the mezzanine neighborhood of the tick. */
-    function encodeMezz(bytes32 poolIdx, int24 tick) private pure returns (bytes32) {
+    function encodeMezz(bytes32 poolIdx, int24 tick) public pure returns (bytes32) {
         int8 wordPos = tick.lobbyKey();
         return keccak256(abi.encodePacked(poolIdx, wordPos));
     }
 
     /* @notice Encodes the hash key for the terminus neighborhood of the tick. */
-    function encodeTerm(bytes32 poolIdx, int24 tick) private pure returns (bytes32) {
+    function encodeTerm(bytes32 poolIdx, int24 tick) public pure returns (bytes32) {
         int16 wordPos = tick.mezzKey();
         return keccak256(abi.encodePacked(poolIdx, wordPos));
     }
 
     /* @notice Encodes the hash key for the mezzanine neighborhood of the first 8-bits
      *         of a tick index. (This is all that's needed to determine mezzanine.) */
-    function encodeMezzWord(bytes32 poolIdx, int8 lobbyPos) private pure returns (bytes32) {
+    function encodeMezzWord(bytes32 poolIdx, int8 lobbyPos) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(poolIdx, lobbyPos));
     }
 
     /* @notice Encodes the hash key for the mezzanine neighborhood of the first 8-bits
      *         of a tick index. (This is all that's needed to determine mezzanine.) */
-    function encodeMezzWord(bytes32 poolIdx, uint8 lobbyPos) private pure returns (bytes32) {
+    function encodeMezzWord(bytes32 poolIdx, uint8 lobbyPos) public pure returns (bytes32) {
         return encodeMezzWord(poolIdx, Bitmaps.uncastBitmapIndex(lobbyPos));
     }
 
     /* @notice Encodes the hash key for the terminus neighborhood of the first 16-bits
      *         of a tick index. (This is all that's needed to determine terminus.) */
-    function encodeTermWord(bytes32 poolIdx, uint8 lobbyPos, uint8 mezzPos) private pure returns (bytes32) {
+    function encodeTermWord(bytes32 poolIdx, uint8 lobbyPos, uint8 mezzPos) public pure returns (bytes32) {
         int16 mezzIdx = Bitmaps.weldLobbyMezz(Bitmaps.uncastBitmapIndex(lobbyPos), mezzPos);
         return keccak256(abi.encodePacked(poolIdx, mezzIdx));
     }
 
     /* @notice If true, indicates there is still more quantity to execute in the swap. */
     function hasSwapLeft(CurveMath.CurveState memory curve, Directives.SwapDirective memory swap)
-        private
+        public
         pure
         returns (bool)
     {
