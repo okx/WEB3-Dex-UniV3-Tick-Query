@@ -1,10 +1,9 @@
 pragma solidity 0.8.19;
 
-import {QueryCroc,LiquidityMath} from "./queryFlatten.sol";
+import {QueryCroc, LiquidityMath} from "./queryFlatten.sol";
 
 import "forge-std/console2.sol";
 import "forge-std/test.sol";
-
 
 contract POC is Test {
     address dex = 0xAaAaAAAaA24eEeb8d57D431224f73832bC34f688;

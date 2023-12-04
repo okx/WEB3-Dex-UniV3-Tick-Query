@@ -9,3 +9,4 @@ forge-std/=lib/forge-std/src/
 solmate/=lib/solmate/src/
 @UniswapV3/core/contracts/=lib/v3-core/contracts/
 @solidly/contracts/=lib/solidly/SolidlyV3Factory/contracts/
+@openzeppelin-3.4.1/contracts/=src/solidly/factory/RamsesV2Factory/@openzeppelin-3.4.1/contracts/

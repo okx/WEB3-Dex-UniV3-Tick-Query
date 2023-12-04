@@ -17,7 +17,7 @@ contract QueryCroc {
     using Bitmaps for uint256;
     using Bitmaps for int24;
 
-    ICroc internal immutable dex;
+    ICroc public immutable dex;
 
     constructor(address _dex) {
         dex = ICroc(payable(_dex));
