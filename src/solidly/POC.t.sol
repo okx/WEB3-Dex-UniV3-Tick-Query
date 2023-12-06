@@ -9,6 +9,7 @@ import "forge-std/console2.sol";
 import "forge-std/test.sol";
 import {RamsesV2Pool} from "./factory/RamsesV2Factory/contracts/V2/RamsesV2Pool.sol";
 import "solmate/tokens/ERC20.sol";
+import "@UniswapV3/core/contracts/UniswapV3Pool.sol";
 
 contract TokenA is ERC20 {
     constructor() ERC20("A", "A", 18) {
@@ -41,6 +42,10 @@ contract Minter {
         pool = _pool;
     }
 
+    function setPool(address _pool) public {
+        pool = RamsesV2Pool(_pool);
+    }
+
     function mint(int24 a, int24 b, uint128 amount) public {
         pool.mint(address(this), a, b, amount, "");
     }
@@ -50,6 +55,13 @@ contract Minter {
     }
 
     function ramsesV2MintCallback(uint256 x, uint256 y, bytes calldata data) external {
+        tokenA.mint(x);
+        tokenB.mint(y);
+        tokenA.transfer(msg.sender, x);
+        tokenB.transfer(msg.sender, y);
+    }
+
+    function uniswapV3MintCallback(uint256 x, uint256 y, bytes calldata data) public {
         tokenA.mint(x);
         tokenB.mint(y);
         tokenA.transfer(msg.sender, x);
@@ -66,6 +78,10 @@ contract Swapper {
         tokenA = _tokenA;
         tokenB = _tokenB;
         pool = _pool;
+    }
+
+    function setPool(address _pool) public {
+        pool = RamsesV2Pool(_pool);
     }
 
     function swap(bool zeroForOne, int256 amountIn) public {
@@ -88,6 +104,17 @@ contract Swapper {
             tokenB.transfer(msg.sender, uint256(y));
         }
     }
+
+    function uniswapV3SwapCallback(int256 x, int256 y, bytes calldata data) external {
+        if (x > 0) {
+            tokenA.mint(uint256(x));
+            tokenA.transfer(msg.sender, uint256(x));
+        }
+        if (y > 0) {
+            tokenB.mint(uint256(y));
+            tokenB.transfer(msg.sender, uint256(y));
+        }
+    }
 }
 
 // address: https://arbiscan.io/address/0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2
@@ -97,10 +124,19 @@ contract Deployer is Test {
     TokenA public tokenA;
     TokenB public tokenB;
     RamsesV2Pool public pool;
+    UniswapV3Pool public pool2;
     Minter public minter;
     Swapper public swapper;
 
-    function deploy() public {
+    function deploy(
+        uint160 sqrtPriceX96,
+        int24 tick,
+        uint16 observationIndex,
+        uint16 observationCardinality,
+        uint16 observationCardinalityNext,
+        uint8 feeProtocol,
+        bool unlocked
+    ) public {
         tokenB = new TokenB();
         tokenA = new TokenA();
 
@@ -116,15 +152,27 @@ contract Deployer is Test {
             uint24(50),
             int24(1)
         );
+
         pool.setSlot0(
-            uint160(79229504437066823001182789432),
-            int24(0),
-            uint16(850),
-            uint16(1000),
-            uint16(2000),
-            uint8(102),
-            true
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
         );
+        pool2 = new UniswapV3Pool(address(this), address(tokenA), address(tokenB), uint24(50), int24(1));
+        pool2.setSlot0(
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
+        );
+
         minter = new Minter(tokenA, tokenB, pool);
         swapper = new Swapper(tokenA, tokenB, pool);
     }
@@ -147,6 +195,12 @@ contract Deployer is Test {
             carryL += deltaL;
             tickA = tickB;
         }
+    }
+
+    function preset2() public {
+        minter.setPool(address(pool2));
+        swapper.setPool(address(pool2));
+        preset();
     }
 
     ERC20 USDC = ERC20(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
@@ -179,15 +233,13 @@ contract POC is Test {
     string toFile = "src/solidly/to1.txt";
     Deployer deployer;
 
-    function setUp() public {
-        
-    }
+    function setUp() public {}
 
     function _test_1() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 156_744_473);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
         deployer = new Deployer();
-        deployer.deploy();
-        deployer.preset();
+
+        
 
         RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
         (
@@ -199,6 +251,17 @@ contract POC is Test {
             uint8 feeProtocol,
             bool unlocked
         ) = USDC_USDC_e.slot0();
+        deployer.deploy(
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
+        );
+        deployer.preset();
+
         console2.log(uint256(sqrtPriceX96));
         console2.log(int256(tick));
         console2.log(uint256(feeProtocol));
@@ -207,10 +270,9 @@ contract POC is Test {
     }
 
     function test_2() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157318163);
-        deployer = new Deployer();
-        deployer.deploy();
-        deployer.preset();
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
+
+        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
         (
             uint160 sqrtPriceX96,
             int24 tick,
@@ -219,15 +281,77 @@ contract POC is Test {
             uint16 observationCardinalityNext,
             uint8 feeProtocol,
             bool unlocked
+        ) = USDC_USDC_e.slot0();
+
+        deployer = new Deployer();
+        deployer.deploy(
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
+        );
+        deployer.preset();
+        (
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
         ) = deployer.pool().slot0();
         console2.log(uint256(sqrtPriceX96));
         console2.log(int256(tick));
         console2.log(uint256(feeProtocol));
         deployer.swapper().swap(true, 100_000 ether);
+        console2.log("pool address", address(deployer.pool()));
+    }
+
+    function _test_3() public {
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
+        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+        (
+            uint160 sqrtPriceX96,
+            int24 tick,
+            uint16 observationIndex,
+            uint16 observationCardinality,
+            uint16 observationCardinalityNext,
+            uint8 feeProtocol,
+            bool unlocked
+        ) = USDC_USDC_e.slot0();
+
+        deployer = new Deployer();
+        deployer.deploy(
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
+        );
+        deployer.preset2();
+        (
+            sqrtPriceX96,
+            tick,
+            observationIndex,
+            observationCardinality,
+            observationCardinalityNext,
+            feeProtocol,
+            unlocked
+        ) = deployer.pool().slot0();
+        console2.log(uint256(sqrtPriceX96));
+        console2.log(int256(tick));
+        console2.log(uint256(feeProtocol));
+        deployer.swapper().swap(true, 100_000 ether);
+        console2.log("pool address", address(deployer.pool()));
     }
 
     function _test_preset() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157318163);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
         RamsesV2Pool pool = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
         int24 tickSpacing = pool.tickSpacing();
         int24 leftMost = -887_272 / tickSpacing / int24(256) - 2;
@@ -257,7 +381,7 @@ contract POC is Test {
             right++;
         }
         vm.writeLine(toFile, vm.toString(index));
-         (
+        (
             uint160 sqrtPriceX96,
             int24 tick,
             uint16 observationIndex,
@@ -267,6 +391,6 @@ contract POC is Test {
             bool unlocked
         ) = pool.slot0();
         vm.writeLine(toFile, vm.toString(tick));
-        vm.writeLine(toFile, vm.toString(uint(sqrtPriceX96)));
+        vm.writeLine(toFile, vm.toString(uint256(sqrtPriceX96)));
     }
 }

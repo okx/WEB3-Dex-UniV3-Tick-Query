@@ -875,7 +875,7 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
                 periodStartTick: states.periods[period].startTick
             });
         }
-
+        console2.log("ramses");
         // continue swapping as long as we haven't used the entire input/output and haven't reached the price limit
         while (state.amountSpecifiedRemaining != 0 && state.sqrtPriceX96 != sqrtPriceLimitX96) {
             StepComputations memory step;
@@ -896,11 +896,11 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
             // get the price for the next tick
             step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
-            console2.log("liquidity", uint(state.liquidity));
+            console2.log("liquidity", uint256(state.liquidity));
             console2.log("amountSpecifiedRemaining", state.amountSpecifiedRemaining);
-            console2.log("sqrtPriceX96", uint(state.sqrtPriceX96));
-            console2.log("currT", int(state.tick));
-            console2.log("nextT", int(step.tickNext));
+            console2.log("sqrtPriceX96", uint256(state.sqrtPriceX96));
+            console2.log("currT", int256(state.tick));
+            console2.log("nextT", int256(step.tickNext));
 
             // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
             (state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount) = SwapMath.computeSwapStep(
@@ -913,7 +913,7 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
                 states.fee
             );
             console2.log("after swap:");
-            console2.log("sqrtPriceX96", uint(state.sqrtPriceX96));
+            console2.log("sqrtPriceX96", uint256(state.sqrtPriceX96));
             console2.log("amountIn", step.amountIn);
             console2.log("amountOut", step.amountOut);
 
