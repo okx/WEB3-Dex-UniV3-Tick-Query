@@ -235,7 +235,7 @@ contract POC is Test {
 
     function setUp() public {}
 
-    function _test_1() public {
+    function test_1() public {
         vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
         deployer = new Deployer();
 
@@ -251,6 +251,7 @@ contract POC is Test {
             uint8 feeProtocol,
             bool unlocked
         ) = USDC_USDC_e.slot0();
+        console2.log(uint(sqrtPriceX96));
         deployer.deploy(
             sqrtPriceX96,
             tick,
