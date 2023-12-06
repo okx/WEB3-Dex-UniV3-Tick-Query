@@ -9,7 +9,7 @@ import "forge-std/console2.sol";
 import "forge-std/test.sol";
 import {RamsesV2Pool} from "./factory/RamsesV2Factory/contracts/V2/RamsesV2Pool.sol";
 import "solmate/tokens/ERC20.sol";
-import "@UniswapV3/core/contracts/UniswapV3Pool.sol";
+import "./contracts/UniswapV3Pool.sol";
 
 contract TokenA is ERC20 {
     constructor() ERC20("A", "A", 18) {
