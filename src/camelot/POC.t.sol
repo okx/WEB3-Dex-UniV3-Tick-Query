@@ -110,7 +110,7 @@ contract AlgebraTest is Test {
         minter = new Minter(tokenA, tokenB, pool);
     }
 
-    function test_1() public {
+    function _test_1() public {
         pool.tickSpacing();
         minter.mint();
         pool.tickTreeRoot();
@@ -120,5 +120,28 @@ contract AlgebraTest is Test {
         pool.tickTable(int16(120 / int16(256)));
         pool.tickSecondLayer(int16(-600 / int16(256) - 1 + 3466) / 256);
         pool.tickSecondLayer(int16(120 / int16(256) - 1 + 3466) / 256);
+    }
+}
+
+contract RDPX is Test {
+    function test_1() public {
+        vm.createSelectFork(vm.envString("ARBI_RPC_URL"), 157_307_319);
+        address rdpx = 0x32Eb7902D4134bf98A28b963D26de779AF92A212; //0
+        address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; //1
+        AlgebraPool pool = AlgebraPool(0x5DADE916E66470ED5397BEE7E2d1acC4D24cAa94);
+
+        pool.swap(
+            address(this),
+            false,
+            int256(2000 ether),
+            uint160(1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342 - 1),
+            ""
+        );
+    }
+
+    function algebraSwapCallback(int256 amount0, int256 amount1, bytes memory data) public {
+        address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; //1
+        deal(weth, address(this), 2000 ether);
+        IERC20(weth).transfer(msg.sender, 2000 ether);
     }
 }

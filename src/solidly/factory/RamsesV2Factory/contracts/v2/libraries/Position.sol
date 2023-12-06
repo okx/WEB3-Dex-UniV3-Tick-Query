@@ -13,7 +13,7 @@ import "./TickMath.sol";
 import "./TickBitmap.sol";
 import "./Oracle.sol";
 
-import "../../v2-periphery/libraries/LiquidityAmounts.sol";
+import "./LiquidityAmounts.sol";
 
 import "../../interfaces/IVotingEscrow.sol";
 import "../../interfaces/IVoter.sol";

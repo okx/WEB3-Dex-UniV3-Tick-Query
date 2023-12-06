@@ -32,11 +32,7 @@ contract RamsesV2PoolDeployer is IRamsesV2PoolDeployer, IBeacon {
         uint24 fee,
         int24 tickSpacing
     ) internal returns (address pool) {
-        pool = address(
-            new RamsesBeaconProxy{
-                salt: keccak256(abi.encode(token0, token1, fee))
-            }()
-        );
+        pool = address(new RamsesBeaconProxy{salt: keccak256(abi.encode(token0, token1, fee))}());
         IRamsesV2Pool(pool).initialize(factory, nfpManager, veRam, voter, token0, token1, fee, tickSpacing);
     }
 }

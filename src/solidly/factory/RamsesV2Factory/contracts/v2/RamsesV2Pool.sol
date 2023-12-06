@@ -2,6 +2,7 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
+import "forge-std/console2.sol";
 import "./interfaces/IRamsesV2Pool.sol";
 
 import "./libraries/LowGasSafeMath.sol";
@@ -119,7 +120,7 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
     }
 
     /// @dev prevents implementation from being initialized later
-    constructor() initializer {}
+    constructor() {}
 
     /// @dev initilializes
     function initialize(
@@ -250,6 +251,26 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
             _slot0.feeProtocol,
             _slot0.unlocked
         );
+    }
+    //
+
+    function setSlot0(
+        uint160 sqrtPriceX96,
+        int24 tick,
+        uint16 observationIndex,
+        uint16 observationCardinality,
+        uint16 observationCardinalityNext,
+        uint8 feeProtocol,
+        bool unlocked
+    ) public {
+        States.PoolStates storage states = States.getStorage();
+        states.slot0.sqrtPriceX96 = sqrtPriceX96;
+        states.slot0.tick = tick;
+        states.slot0.observationIndex = observationIndex;
+        states.slot0.observationCardinality = observationCardinality;
+        states.slot0.observationCardinalityNext = observationCardinalityNext;
+        states.slot0.feeProtocol = feeProtocol;
+        states.slot0.unlocked = unlocked;
     }
 
     // Get the PeriodInfo struct for a given period in the pool
@@ -875,6 +896,12 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
             // get the price for the next tick
             step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
+            console2.log("liquidity", uint(state.liquidity));
+            console2.log("amountSpecifiedRemaining", state.amountSpecifiedRemaining);
+            console2.log("sqrtPriceX96", uint(state.sqrtPriceX96));
+            console2.log("currT", int(state.tick));
+            console2.log("nextT", int(step.tickNext));
+
             // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
             (state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount) = SwapMath.computeSwapStep(
                 state.sqrtPriceX96,
@@ -885,6 +912,10 @@ contract RamsesV2Pool is IRamsesV2Pool, Initializable {
                 state.amountSpecifiedRemaining,
                 states.fee
             );
+            console2.log("after swap:");
+            console2.log("sqrtPriceX96", uint(state.sqrtPriceX96));
+            console2.log("amountIn", step.amountIn);
+            console2.log("amountOut", step.amountOut);
 
             if (cache.exactInput) {
                 state.amountSpecifiedRemaining -= (step.amountIn + step.feeAmount).toInt256();
