@@ -117,7 +117,7 @@ contract Swapper {
     }
 }
 
-// address: https://arbiscan.io/address/0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2
+// address: https://arbiscan.io/address/0x30AFBcF9458c3131A6d051C621E307E6278E4110
 // deltaL: 0x000000000000000000000000000000000000000000000000003c198be70ceb4b00000000000000000000000000000001ffffffffffffffffffc3d6cde38ee52700000000000000000000000000000014ffffffffffffffffffffffff8c6305d0000000000000000000000000000d89a0fffffffffffffffffffffffffffe7964ffffffffffffffffffffffffffffffff000000000000000000000fa635642f8effffffffffffffffffffffffffffffec000000000000000000000000739cfa30fffffffffffffffffffffffffff276600000000000000000000000000001869c
 contract Deployer is Test {
     string toFile = "src/solidly/to1.txt";
@@ -149,8 +149,8 @@ contract Deployer is Test {
             address(this),
             address(tokenA),
             address(tokenB),
-            uint24(50),
-            int24(1)
+            uint24(500),
+            int24(10)
         );
 
         pool.setSlot0(
@@ -183,7 +183,7 @@ contract Deployer is Test {
         int128 deltaL;
         int128 carryL = 0;
         tickA = int24(vm.parseInt(vm.readLine(toFile)));
-        for (uint256 i = 0; i < 7 - 1; i++) {
+        for (uint256 i = 0; i < 33 - 1; i++) {
             deltaL = int128(vm.parseInt(vm.readLine(toFile)));
             tickB = int24(vm.parseInt(vm.readLine(toFile)));
             int128 amountL = carryL + deltaL;
@@ -203,9 +203,9 @@ contract Deployer is Test {
         preset();
     }
 
-    ERC20 USDC = ERC20(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
-    ERC20 USDC_e = ERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
-    RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+    ERC20 USDC = ERC20(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+    ERC20 USDC_e = ERC20(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
+    RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x30AFBcF9458c3131A6d051C621E307E6278E4110);
 
     function swapCompare(bool zeroForOne, uint256 amount) public {
         deal(address(USDC), address(this), amount);
@@ -236,12 +236,10 @@ contract POC is Test {
     function setUp() public {}
 
     function test_1() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_694_108);
         deployer = new Deployer();
 
-        
-
-        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x30AFBcF9458c3131A6d051C621E307E6278E4110);
         (
             uint160 sqrtPriceX96,
             int24 tick,
@@ -251,7 +249,7 @@ contract POC is Test {
             uint8 feeProtocol,
             bool unlocked
         ) = USDC_USDC_e.slot0();
-        console2.log(uint(sqrtPriceX96));
+        console2.log(uint256(sqrtPriceX96));
         deployer.deploy(
             sqrtPriceX96,
             tick,
@@ -267,13 +265,13 @@ contract POC is Test {
         console2.log(int256(tick));
         console2.log(uint256(feeProtocol));
 
-        deployer.swapCompare(true, 100_000 ether);
+        deployer.swapCompare(true, 120 ether);
     }
 
     function test_2() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_694_108);
 
-        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x30AFBcF9458c3131A6d051C621E307E6278E4110);
         (
             uint160 sqrtPriceX96,
             int24 tick,
@@ -283,7 +281,7 @@ contract POC is Test {
             uint8 feeProtocol,
             bool unlocked
         ) = USDC_USDC_e.slot0();
-
+        console2.log(uint(sqrtPriceX96));
         deployer = new Deployer();
         deployer.deploy(
             sqrtPriceX96,
@@ -307,13 +305,13 @@ contract POC is Test {
         console2.log(uint256(sqrtPriceX96));
         console2.log(int256(tick));
         console2.log(uint256(feeProtocol));
-        deployer.swapper().swap(true, 100_000 ether);
+        deployer.swapper().swap(true, 120 ether);
         console2.log("pool address", address(deployer.pool()));
     }
 
     function _test_3() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
-        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_694_108);
+        RamsesV2Pool USDC_USDC_e = RamsesV2Pool(0x30AFBcF9458c3131A6d051C621E307E6278E4110);
         (
             uint160 sqrtPriceX96,
             int24 tick,
@@ -347,13 +345,13 @@ contract POC is Test {
         console2.log(uint256(sqrtPriceX96));
         console2.log(int256(tick));
         console2.log(uint256(feeProtocol));
-        deployer.swapper().swap(true, 100_000 ether);
+        deployer.swapper().swap(true, 120 ether);
         console2.log("pool address", address(deployer.pool()));
     }
 
     function _test_preset() public {
-        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_349_012);
-        RamsesV2Pool pool = RamsesV2Pool(0x562d29b54d2c57F8620C920415C4dCEAdD6dE2d2);
+        vm.createSelectFork("https://arbitrum.llamarpc.com", 157_694_108);
+        RamsesV2Pool pool = RamsesV2Pool(0x30AFBcF9458c3131A6d051C621E307E6278E4110);
         int24 tickSpacing = pool.tickSpacing();
         int24 leftMost = -887_272 / tickSpacing / int24(256) - 2;
         int24 rightMost = 887_272 / tickSpacing / int24(256) + 1;
@@ -393,5 +391,6 @@ contract POC is Test {
         ) = pool.slot0();
         vm.writeLine(toFile, vm.toString(tick));
         vm.writeLine(toFile, vm.toString(uint256(sqrtPriceX96)));
+        vm.writeLine(toFile, vm.toString(int256(tick)));
     }
 }
