@@ -281,7 +281,7 @@ contract POC is Test {
             uint8 feeProtocol,
             bool unlocked
         ) = USDC_USDC_e.slot0();
-        console2.log(uint(sqrtPriceX96));
+        console2.log(uint256(sqrtPriceX96));
         deployer = new Deployer();
         deployer.deploy(
             sqrtPriceX96,

@@ -1,5 +1,5 @@
 [profile.default]
-src = "src/solidly"
+src = "src/quote"
 out = "out"
 libs = ["lib"]
 

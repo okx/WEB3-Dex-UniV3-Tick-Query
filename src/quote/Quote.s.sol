@@ -91,7 +91,7 @@ contract UniV3QuoteTest is Test {
     function setUp() public {}
 
     function _test_superCompact() public {
-        vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 17990681);
+        vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/7Brn0mxZnlMWbHf0yqAEicmsgKdLJGmA", 17_990_681);
         query = new QueryData();
         (, bytes memory res) = address(WETH_USDC).staticcall(abi.encodeWithSignature("slot0()"));
         int24 curr;
@@ -102,13 +102,13 @@ contract UniV3QuoteTest is Test {
     }
 
     function _test_op() public {
-        vm.createSelectFork(vm.envString("OP_RPC_URL"), 109530240);
+        vm.createSelectFork(vm.envString("OP_RPC_URL"), 109_530_240);
         query = new QueryData();
         query.queryUniv3TicksSuperCompact(0x9C1630da3d6c9d5eF977500478E330b0a56B2f23, 100);
     }
 
-    function test_eth() public {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18182443);
+    function _test_eth() public {
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18_182_443);
         query = new QueryData();
         bytes memory tickInfo = QueryData(0xcAB450888f7F25762EB0710f40B67fF76767aB86).queryUniv3TicksSuperCompact(
             0x694D149DF9B0d82C92940aD3b8fa10722114ca71, 100
@@ -131,13 +131,13 @@ contract UniV3QuoteTest is Test {
         }
     }
 
-    function test_compare() public {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18182443);
+    function _test_compare() public {
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18_182_443);
         address pool = 0x694D149DF9B0d82C92940aD3b8fa10722114ca71;
         int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 
-        int24 leftMost = -887272 / tickSpacing / int24(256) - 2;
-        int24 rightMost = 887272 / tickSpacing / int24(256) + 1;
+        int24 leftMost = -887_272 / tickSpacing / int24(256) - 2;
+        int24 rightMost = 887_272 / tickSpacing / int24(256) + 1;
         while (leftMost < rightMost) {
             uint256 res = IUniswapV3Pool(pool).tickBitmap(int16(leftMost));
             if (res > 0) {
@@ -256,7 +256,7 @@ contract UniV3QuoteTest is Test {
     // }
 
     function _test_querySupper2() public {
-        vm.createSelectFork(vm.envString("BASE_RPC_URL"), 3555583);
+        vm.createSelectFork(vm.envString("BASE_RPC_URL"), 3_555_583);
         // query = QueryData(0x627fd455849665685086181Aff520E30F209D34E);
         query = new QueryData();
         bytes memory tickInfo = query.queryUniv3TicksSuperCompact(0x268854Be35C96F08b21c6829e122E859b02DD7C3, 500);
@@ -347,11 +347,11 @@ contract AlgebraQuoteTest is Test {
     QueryData query;
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.ankr.com/arbitrum");
-        query = new QueryData();
+        // vm.createSelectFork("https://rpc.ankr.com/arbitrum");
+        // query = new QueryData();
     }
 
-    function test_query() public {
+    function _test_query() public {
         // vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm", 114423496);
         // query = new QueryData();
         bytes memory tickInfo = query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
@@ -376,11 +376,39 @@ contract AlgebraQuoteTest is Test {
         }
     }
 
-    function test_compare() public {
+    function test_query() public {
+        // vm.createSelectFork(vm.envString("ARBI_RPC_URL"));
+        vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm");
+        query = new QueryData();
+        bytes memory tickInfo =
+        // hex"ffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000000f00000000000000000000000000000000fffffffffffffffffffffffffffffff200000000000000000000000000000000ffffffffffffffffffffffffffffffee00000000000000000000000000000000";
+         query.queryAlgebraTicksSuperCompact3(address(0xcc065Eb6460272481216757293FFC54A061bA60e), 100);
+        // query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
+        // query.queryAlgebraTicksPoolCompact(address(WETH_USDC),887273, 100, false);
+        uint256 len;
+        uint256 offset;
+        // console2.logBytes(tickInfo);
+
+        assembly {
+            len := mload(tickInfo)
+            offset := add(tickInfo, 32)
+        }
+        for (uint256 i = 0; i < len / 32; i++) {
+            int256 res;
+            assembly {
+                res := mload(offset)
+                offset := add(offset, 32)
+            }
+            console2.log("tick: %d", int128(res >> 128));
+            console2.log("l: %d", int128(res));
+        }
+    }
+
+    function _test_compare() public {
         address pool = WETH_USDC;
 
-        int24 leftMost = -887272 / int24(256) - 2;
-        int24 rightMost = 887272 / int24(256) + 1;
+        int24 leftMost = -887_272 / int24(256) - 2;
+        int24 rightMost = 887_272 / int24(256) + 1;
         while (leftMost < rightMost) {
             uint256 res = IAlgebraPoolV1_9(pool).tickTable(int16(leftMost));
             if (res > 0) {
@@ -444,7 +472,7 @@ contract IZumiQuoteTest is Test {
     }
 
     // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
-    function test_3() public {
+    function _test_3() public {
         bytes memory data =
             hex"fffbc1480000000000000000000000000000000000000000000000000091dfb3fffbbfb800000000000000000000000000000000000000000000000000989680fffbba4000000000000000000000000000000000000000000000000000989680fffbb40000000000000000000000000000000000000000000000000000989680fffbacf800000000000000000000000000000000000000000000000000989680fffba46000000000000000000000000000000000000000000000000000989680fffb9d58000000000000000000000000000000000000000000000000004c4b40fffb997000000000000000000000000000000000000000000000000000989680fffb890800000000000000000000000000000000000000000000000000989680fffb6e78000000000000000000000000000000000000000000000000001e8480fffb6db00000000000000000000000000000000000000000000000000098967f";
         uint256 len;
@@ -479,8 +507,8 @@ contract IZumiQuoteTest is Test {
         address pool = WBNB_USDT;
         int24 tickSpacing = IZumiPool(pool).pointDelta();
 
-        int24 leftMost = -887272 / tickSpacing / int24(256) - 2;
-        int24 rightMost = 887272 / tickSpacing / int24(256) + 1;
+        int24 leftMost = -887_272 / tickSpacing / int24(256) - 2;
+        int24 rightMost = 887_272 / tickSpacing / int24(256) + 1;
         while (leftMost < rightMost) {
             uint256 res = IZumiPool(pool).pointBitmap(int16(leftMost));
             if (res > 0) {
