@@ -1,0 +1,52 @@
+{
+  "name": "@izumifinance/iziswap_core",
+  "version": "1.0.1",
+  "keywords": [
+    "iZUMi",
+    "iziswap",
+    "core"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/izumiFinance/iZiSwap-core.git"
+  },
+  "files": [
+    "contracts/*.sol",
+    "contracts/interfaces/*.sol",
+    "contracts/libraries/*.sol",
+    "artifacts/contracts/**/*.json",
+    "!artifacts/contracts/**/*.dbg.json",
+    "!artifacts/contracts/test/**/*"
+  ],
+  "devDependencies": {
+    "@cronos-labs/hardhat-cronoscan": "^0.0.4",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.7",
+    "hardhat": "^2.11.2",
+    "web3": "^1.6.1",
+    "@poanet/solidity-flattener": "^3.0.8",
+    "bignumber.js": "^9.0.2",
+    "hardhat-contract-sizer": "^2.1.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2"
+  },
+  "description": "<div align=\"center\">   <a href=\"https://izumi.finance\">      <img width=\"900px\" height=\"auto\"      src=\"image/logo.png\">   </a> </div>",
+  "bugs": {
+    "url": "https://github.com/izumiFinance/iZiSwap-core/issues"
+  },
+  "homepage": "https://github.com/izumiFinance/iZiSwap-core#readme",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "",
+  "license": "ISC"
+}

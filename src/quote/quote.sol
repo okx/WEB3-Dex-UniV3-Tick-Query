@@ -95,9 +95,7 @@ interface IUniswapV3PoolState {
     /// Outside values can only be used if the tick is initialized, i.e. if liquidityGross is greater than 0.
     /// In addition, these values are only relative and must be used only in comparison to previous snapshots for
     /// a specific position.
-    function ticks(
-        int24 tick
-    )
+    function ticks(int24 tick)
         external
         view
         returns (
@@ -121,9 +119,7 @@ interface IUniswapV3PoolState {
     /// Returns feeGrowthInside1LastX128 fee growth of token1 inside the tick range as of the last mint/burn/poke,
     /// Returns tokensOwed0 the computed amount of token0 owed to the position as of the last mint/burn/poke,
     /// Returns tokensOwed1 the computed amount of token1 owed to the position as of the last mint/burn/poke
-    function positions(
-        bytes32 key
-    )
+    function positions(bytes32 key)
         external
         view
         returns (
@@ -142,9 +138,7 @@ interface IUniswapV3PoolState {
     /// Returns tickCumulative the tick multiplied by seconds elapsed for the life of the pool as of the observation timestamp,
     /// Returns secondsPerLiquidityCumulativeX128 the seconds per in range liquidity for the life of the pool as of the observation timestamp,
     /// Returns initialized whether the observation has been initialized and the values are safe to use
-    function observations(
-        uint256 index
-    )
+    function observations(uint256 index)
         external
         view
         returns (
@@ -162,9 +156,7 @@ interface IZumiPool {
 
     function orderOrEndpoint(int24 tick) external view returns (int24);
 
-    function limitOrderData(
-        int24 point
-    )
+    function limitOrderData(int24 point)
         external
         view
         returns (
@@ -188,9 +180,7 @@ interface IZumiPool {
 interface IHorizonPool {
     function tickDistance() external view returns (int24);
 
-    function ticks(
-        int24 tick
-    )
+    function ticks(int24 tick)
         external
         view
         returns (
@@ -229,9 +219,7 @@ interface IAlgebraPool {
 
     function tickSpacing() external view returns (int24);
 
-    function ticks(
-        int24 tick
-    )
+    function ticks(int24 tick)
         external
         view
         returns (
@@ -265,9 +253,7 @@ interface IAlgebraPoolV1_9 {
         );
 
     function tickSpacing() external view returns (int24);
-    function ticks(
-        int24 tick
-    )
+    function ticks(int24 tick)
         external
         view
         returns (
@@ -343,14 +329,10 @@ contract QueryData {
         tmp.rightMost = 887_272 / tmp.tickSpacing / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint =
-                uint256(
-                    int256(tmp.currTick) /
-                        int256(tmp.tickSpacing) -
-                        (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) *
-                        256
-                ) %
-                256;
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
@@ -381,8 +363,8 @@ contract QueryData {
                         assembly {
                             liquidityNet := mload(add(d, 64))
                         }
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -412,8 +394,8 @@ contract QueryData {
                         assembly {
                             liquidityNet := mload(add(d, 64))
                         }
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -476,8 +458,8 @@ contract QueryData {
                             liquidityNet := mload(add(deltaL, 64))
                         }
 
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -506,8 +488,8 @@ contract QueryData {
                         assembly {
                             liquidityNet := mload(add(deltaL, 64))
                         }
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -542,14 +524,10 @@ contract QueryData {
         tmp.rightMost = 887_272 / tmp.tickSpacing / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint =
-                uint256(
-                    int256(tmp.currTick) /
-                        int256(tmp.tickSpacing) -
-                        (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) *
-                        256
-                ) %
-                256;
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
@@ -578,8 +556,8 @@ contract QueryData {
                             liquidityNet := mload(add(deltaL, 64))
                         }
 
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -608,8 +586,8 @@ contract QueryData {
                         assembly {
                             liquidityNet := mload(add(deltaL, 64))
                         }
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -628,7 +606,7 @@ contract QueryData {
     }
 
     function queryHorizonTicksSuperCompact(address pool, uint256 iteration) public view returns (bytes memory) {
-        (, , int24 currTick, ) = IHorizonPool(pool).getPoolState();
+        (,, int24 currTick,) = IHorizonPool(pool).getPoolState();
         int24 currTick2 = currTick;
         uint256 threshold = iteration / 2;
 
@@ -636,10 +614,10 @@ contract QueryData {
         bytes memory tickInfo;
 
         while (currTick < MAX_TICK_PLUS_1 && iteration > threshold) {
-            (, int128 liquidityNet, , ) = IHorizonPool(pool).ticks(currTick);
+            (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick);
 
-            int256 data = int256(uint256(int256(currTick)) << 128) +
-                (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            int256 data = int256(uint256(int256(currTick)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
             tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
             (, int24 nextTick) = IHorizonPool(pool).initializedTicks(currTick);
             if (currTick == nextTick) {
@@ -650,11 +628,11 @@ contract QueryData {
         }
 
         while (currTick2 > MIN_TICK_MINUS_1 && iteration > 0) {
-            (, int128 liquidityNet, , ) = IHorizonPool(pool).ticks(currTick2);
-            int256 data = int256(uint256(int256(currTick2)) << 128) +
-                (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            (, int128 liquidityNet,,) = IHorizonPool(pool).ticks(currTick2);
+            int256 data = int256(uint256(int256(currTick2)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
             tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
-            (int24 prevTick, ) = IHorizonPool(pool).initializedTicks(currTick2);
+            (int24 prevTick,) = IHorizonPool(pool).initializedTicks(currTick2);
             if (prevTick == currTick2) {
                 break;
             }
@@ -687,10 +665,10 @@ contract QueryData {
         bytes memory tickInfo;
 
         while (currTick < MAX_TICK_PLUS_1 && iteration > threshold) {
-            (, int128 liquidityNet, , , int24 prevTick, int24 nextTick, , , ) = IAlgebraPool(pool).ticks(currTick);
+            (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick);
 
-            int256 data = int256(uint256(int256(currTick)) << 128) +
-                (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            int256 data = int256(uint256(int256(currTick)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
             tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
             if (currTick == nextTick) {
@@ -701,10 +679,10 @@ contract QueryData {
         }
 
         while (currTick2 > MIN_TICK_MINUS_1 && iteration > 0) {
-            (, int128 liquidityNet, , , int24 prevTick, int24 nextTick, , , ) = IAlgebraPool(pool).ticks(currTick2);
+            (, int128 liquidityNet,,, int24 prevTick, int24 nextTick,,,) = IAlgebraPool(pool).ticks(currTick2);
 
-            int256 data = int256(uint256(int256(currTick2)) << 128) +
-                (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+            int256 data = int256(uint256(int256(currTick2)) << 128)
+                + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
             tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
             if (currTick2 == prevTick) {
@@ -734,14 +712,10 @@ contract QueryData {
         tmp.rightMost = 887_272 / tmp.tickSpacing / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint =
-                uint256(
-                    int256(tmp.currTick) /
-                        int256(tmp.tickSpacing) -
-                        (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) *
-                        256
-                ) %
-                256;
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
@@ -766,22 +740,23 @@ contract QueryData {
                         int24 tick = int24(int256((256 * tmp.right + int256(i)) * tmp.tickSpacing));
                         int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
-                            (, int128 liquidityNet, , , ) = IZumiPool(pool).points(tick);
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
-                                int256 data = int256(uint256(int256(tick)) << 128) +
-                                    (int256(liquidityNet) &
-                                        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                                int256 data = int256(uint256(int256(tick)) << 128)
+                                    + (
+                                        int256(liquidityNet)
+                                            & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+                                    );
                                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                                 index++;
                             }
                         }
                         if (orderOrEndpoint & 0x02 == 0x02) {
-                            (uint128 sellingX, , , , , uint128 sellingY, , , , ) = IZumiPool(pool).limitOrderData(tick);
+                            (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
                             if (sellingX != 0 || sellingY != 0) {
-                                bytes32 data = bytes32(
-                                    abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY))
-                                );
+                                bytes32 data =
+                                    bytes32(abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY)));
                                 limitOrderInfo = bytes.concat(limitOrderInfo, data);
 
                                 index++;
@@ -807,22 +782,23 @@ contract QueryData {
 
                         int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tmp.tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
-                            (, int128 liquidityNet, , , ) = IZumiPool(pool).points(tick);
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             if (liquidityNet != 0) {
-                                int256 data = int256(uint256(int256(tick)) << 128) +
-                                    (int256(liquidityNet) &
-                                        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                                int256 data = int256(uint256(int256(tick)) << 128)
+                                    + (
+                                        int256(liquidityNet)
+                                            & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+                                    );
                                 tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                                 index++;
                             }
                         }
                         if (orderOrEndpoint & 0x02 == 0x02) {
-                            (uint128 sellingX, , , , , uint128 sellingY, , , , ) = IZumiPool(pool).limitOrderData(tick);
+                            (uint128 sellingX,,,,, uint128 sellingY,,,,) = IZumiPool(pool).limitOrderData(tick);
                             if (sellingX != 0 || sellingY != 0) {
-                                bytes32 data = bytes32(
-                                    abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY))
-                                );
+                                bytes32 data =
+                                    bytes32(abi.encodePacked(int32(tick), uint112(sellingX), uint112(sellingY)));
                                 limitOrderInfo = bytes.concat(limitOrderInfo, data);
 
                                 index++;
@@ -840,6 +816,7 @@ contract QueryData {
         }
         return (tickInfo, limitOrderInfo);
     }
+
     function queryAlgebraTicksSuperCompact4(address pool, uint256 len) public view returns (bytes memory) {
         SuperVar memory tmp;
         tmp.tickSpacing = 1;
@@ -857,14 +834,10 @@ contract QueryData {
         tmp.rightMost = 887_272 / tmp.tickSpacing / int24(256) + 1;
 
         if (tmp.currTick < 0) {
-            tmp.initPoint =
-                uint256(
-                    int256(tmp.currTick) /
-                        int256(tmp.tickSpacing) -
-                        (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) *
-                        256
-                ) %
-                256;
+            tmp.initPoint = uint256(
+                int256(tmp.currTick) / int256(tmp.tickSpacing)
+                    - (int256(tmp.currTick) / int256(tmp.tickSpacing) / 256 - 1) * 256
+            ) % 256;
         } else {
             tmp.initPoint = (uint256(int256(tmp.currTick)) / uint256(int256(tmp.tickSpacing))) % 256;
         }
@@ -893,8 +866,8 @@ contract QueryData {
                             liquidityNet := mload(add(deltaL, 64))
                         }
 
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;
@@ -923,8 +896,8 @@ contract QueryData {
                         assembly {
                             liquidityNet := mload(add(deltaL, 64))
                         }
-                        int256 data = int256(uint256(int256(tick)) << 128) +
-                            (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
+                        int256 data = int256(uint256(int256(tick)) << 128)
+                            + (int256(liquidityNet) & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff);
                         tickInfo = bytes.concat(tickInfo, bytes32(uint256(data)));
 
                         index++;

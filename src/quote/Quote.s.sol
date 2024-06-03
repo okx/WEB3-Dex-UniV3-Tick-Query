@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 import "forge-std/test.sol";
 import "forge-std/console2.sol";
 import "./quote.sol";
+import "../ambient/contracts/libraries/TickMath.sol";
 
 contract Deploy is Test {
     QueryData query;
@@ -377,7 +378,7 @@ contract AlgebraQuoteTest is Test {
             address(0xE47121D706e3Aeb4243f58551023c0849cda88Ce),
             10
         );
-        0xE47121D706e3Aeb4243f58551023c0849cda88Ce.call(abi.encodeWithSignature("", ));
+        // 0xE47121D706e3Aeb4243f58551023c0849cda88Ce.call(abi.encodeWithSignature("", ));
         // query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
         // query.queryAlgebraTicksPoolCompact(address(WETH_USDC),887273, 100, false);
         uint256 len;
@@ -396,6 +397,32 @@ contract AlgebraQuoteTest is Test {
             }
             console2.log("tick: %d", int128(res >> 128));
             console2.log("l: %d", int128(res));
+        }
+    }
+
+    function test_xlayer_swap() public {
+        vm.createSelectFork("https://xlayerrpc.okx.com/");
+        address pool = 0xE47121D706e3Aeb4243f58551023c0849cda88Ce;
+        pool.call(
+            abi.encodeWithSignature(
+                "swap(address,bool,int256,uint160,bytes)",
+                address(this),
+                true,
+                1,
+                TickMath.getSqrtRatioAtTick(-887_271),
+                ""
+            )
+        );
+    }
+
+    function algebraSwapCallback(int256 amount0, int256 amount1, bytes memory) public {
+        if (amount0 > 0) {
+            address token = IUniswapV3PoolImmutables(msg.sender).token0();
+            deal(token, msg.sender, uint256(amount0));
+        }
+        if (amount1 > 0) {
+            address token = IUniswapV3PoolImmutables(msg.sender).token1();
+            deal(token, msg.sender, uint256(amount1));
         }
     }
 
