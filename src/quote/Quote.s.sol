@@ -1,6 +1,6 @@
 pragma solidity 0.8.17;
 
-import "forge-std/test.sol";
+import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import "./quote.sol";
 import "../ambient/contracts/libraries/TickMath.sol";
@@ -130,8 +130,7 @@ contract UniV3QuoteTest is Test {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"), 18_182_443);
         query = new QueryData();
         bytes memory tickInfo = QueryData(0xcAB450888f7F25762EB0710f40B67fF76767aB86).queryUniv3TicksSuperCompact(
-            0x694D149DF9B0d82C92940aD3b8fa10722114ca71,
-            100
+            0x694D149DF9B0d82C92940aD3b8fa10722114ca71, 100
         );
         uint256 len;
         uint256 offset;
@@ -165,7 +164,7 @@ contract UniV3QuoteTest is Test {
                     uint256 isInit = res & 0x01;
                     if (isInit > 0) {
                         int256 tick = int256((256 * leftMost + int256(i)) * tickSpacing);
-                        (, int128 liquidityNet, , , , , , ) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
+                        (, int128 liquidityNet,,,,,,) = IUniswapV3Pool(pool).ticks(int24(int256(tick)));
                         console2.log(tick);
                         console2.log(liquidityNet);
                     }
@@ -360,24 +359,18 @@ contract UniV3QuoteTest is Test {
 //     //     }
 //     // }
 // }
+import "../algebra/IPool.sol";
 
 contract AlgebraQuoteTest is Test {
     address WETH_USDC = 0xb7Dd20F3FBF4dB42Fd85C839ac0241D09F72955f;
     address WETH_QQ = 0xdAD783421C225e2202afCd236772433F01b57ea4;
     QueryData query;
 
-    function setUp() public {
-        // vm.createSelectFork("https://rpc.ankr.com/arbitrum");
-        // query = new QueryData();
-    }
-
     function test_query_xlayer() public {
         vm.createSelectFork("https://xlayerrpc.okx.com/");
         query = new QueryData();
-        bytes memory tickInfo = query.queryAlgebraTicksSuperCompact4(
-            address(0xE47121D706e3Aeb4243f58551023c0849cda88Ce),
-            10
-        );
+        bytes memory tickInfo =
+            query.queryAlgebraTicksSuperCompact4(address(0xE47121D706e3Aeb4243f58551023c0849cda88Ce), 10);
         // 0xE47121D706e3Aeb4243f58551023c0849cda88Ce.call(abi.encodeWithSignature("", ));
         // query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
         // query.queryAlgebraTicksPoolCompact(address(WETH_USDC),887273, 100, false);
@@ -402,17 +395,8 @@ contract AlgebraQuoteTest is Test {
 
     function test_xlayer_swap() public {
         vm.createSelectFork("https://xlayerrpc.okx.com/");
-        address pool = 0xE47121D706e3Aeb4243f58551023c0849cda88Ce;
-        pool.call(
-            abi.encodeWithSignature(
-                "swap(address,bool,int256,uint160,bytes)",
-                address(this),
-                true,
-                1,
-                TickMath.getSqrtRatioAtTick(-887_271),
-                ""
-            )
-        );
+        IAlgebraPoolActions pool = IAlgebraPoolActions(0xE47121D706e3Aeb4243f58551023c0849cda88Ce);
+        pool.swap(address(this), true, type(int256).max, uint160(4295128739+1), "");
     }
 
     function algebraSwapCallback(int256 amount0, int256 amount1, bytes memory) public {
@@ -431,9 +415,7 @@ contract AlgebraQuoteTest is Test {
         vm.createSelectFork("https://rpc.arb1.arbitrum.gateway.fm");
         query = new QueryData();
         bytes memory tickInfo = query.queryAlgebraTicksSuperCompact3( // hex"ffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000000f00000000000000000000000000000000fffffffffffffffffffffffffffffff200000000000000000000000000000000ffffffffffffffffffffffffffffffee00000000000000000000000000000000";
-                address(0xcc065Eb6460272481216757293FFC54A061bA60e),
-                100
-            );
+        address(0xcc065Eb6460272481216757293FFC54A061bA60e), 100);
         // query.queryAlgebraTicksSuperCompact(address(WETH_USDC), 100);
         // query.queryAlgebraTicksPoolCompact(address(WETH_USDC),887273, 100, false);
         uint256 len;
@@ -524,8 +506,8 @@ contract IZumiQuoteTest is Test {
 
     // https://bscscan.com/tx/0x6eb4a00f9b49306ffe079e4807a32b3de42b885a8676c508b246c3c967167564
     function _test_3() public {
-        bytes
-            memory data = hex"fffbc1480000000000000000000000000000000000000000000000000091dfb3fffbbfb800000000000000000000000000000000000000000000000000989680fffbba4000000000000000000000000000000000000000000000000000989680fffbb40000000000000000000000000000000000000000000000000000989680fffbacf800000000000000000000000000000000000000000000000000989680fffba46000000000000000000000000000000000000000000000000000989680fffb9d58000000000000000000000000000000000000000000000000004c4b40fffb997000000000000000000000000000000000000000000000000000989680fffb890800000000000000000000000000000000000000000000000000989680fffb6e78000000000000000000000000000000000000000000000000001e8480fffb6db00000000000000000000000000000000000000000000000000098967f";
+        bytes memory data =
+            hex"fffbc1480000000000000000000000000000000000000000000000000091dfb3fffbbfb800000000000000000000000000000000000000000000000000989680fffbba4000000000000000000000000000000000000000000000000000989680fffbb40000000000000000000000000000000000000000000000000000989680fffbacf800000000000000000000000000000000000000000000000000989680fffba46000000000000000000000000000000000000000000000000000989680fffb9d58000000000000000000000000000000000000000000000000004c4b40fffb997000000000000000000000000000000000000000000000000000989680fffb890800000000000000000000000000000000000000000000000000989680fffb6e78000000000000000000000000000000000000000000000000001e8480fffb6db00000000000000000000000000000000000000000000000000098967f";
         uint256 len;
         uint256 offset;
         assembly {
@@ -569,7 +551,7 @@ contract IZumiQuoteTest is Test {
                         int24 tick = int24(int256((256 * leftMost + int256(i)) * tickSpacing));
                         int24 orderOrEndpoint = IZumiPool(pool).orderOrEndpoint(tick / tickSpacing);
                         if (orderOrEndpoint & 0x01 == 0x01) {
-                            (, int128 liquidityNet, , , ) = IZumiPool(pool).points(tick);
+                            (, int128 liquidityNet,,,) = IZumiPool(pool).points(tick);
                             console2.log(tick);
                         }
                         // if (orderOrEndpoint & 0x02 == 0x02) {

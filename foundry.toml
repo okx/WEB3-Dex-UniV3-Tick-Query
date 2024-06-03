@@ -1,5 +1,5 @@
 [profile.default]
-src = "src/quote"
+src = "src/algebra"
 out = "out"
 libs = ["lib"]
 

@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`PoolAddress #computeAddress gas cost [ @skip-on-coverage ] 1`] = `579`;
+
+exports[`PoolAddress #computeAddress matches example from core repo 1`] = `"0xf52399B137A137DA714460611BC7f70F00Dc19e7"`;
